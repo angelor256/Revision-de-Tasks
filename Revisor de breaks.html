@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Revisor de breaks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg:#EAEEF4; --panel:#FFFFFF; --panel2:#F4F6FA; --ink:#101B33; --muted:#566280; --line:#D4DAE6; --grid:#E3E8F0;
+  --phones:#2F5BEA; --chats:#0A7F64; --tickets:#A36405; --casino:#A82B7C; --other:#5F6A8A; --chipInk:#FFFFFF;
+  --bad:#D3263A; --badSoft:#FBE7EA; --warn:#B87408; --warnSoft:#FBF0DA; --ok:#1B7F4F; --okSoft:#DDF3E7; --info:#3F5BA9; --infoSoft:#E3E9F8;
+  --shadow:0 1px 2px rgba(16,27,51,.08), 0 8px 24px -12px rgba(16,27,51,.22);
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --col:64px; --who:176px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1222; --panel:#131C32; --panel2:#18233D; --ink:#E7ECF8; --muted:#97A4C2; --line:#27334F; --grid:#1D2943;
+    --phones:#6C8CFF; --chats:#2FC3A0; --tickets:#E8A93A; --casino:#E26BB5; --other:#8D99BA; --chipInk:#0B1222;
+    --bad:#FF5B6E; --badSoft:#3A1B26; --warn:#E8A93A; --warnSoft:#3A2E15; --ok:#4ED08C; --okSoft:#143426; --info:#8FA8F0; --infoSoft:#1C2748;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -12px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B1222; --panel:#131C32; --panel2:#18233D; --ink:#E7ECF8; --muted:#97A4C2; --line:#27334F; --grid:#1D2943;
+  --phones:#6C8CFF; --chats:#2FC3A0; --tickets:#E8A93A; --casino:#E26BB5; --other:#8D99BA; --chipInk:#0B1222;
+  --bad:#FF5B6E; --badSoft:#3A1B26; --warn:#E8A93A; --warnSoft:#3A2E15; --ok:#4ED08C; --okSoft:#143426; --info:#8FA8F0; --infoSoft:#1C2748;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.45 var(--body);min-height:100vh}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--phones);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* barra superior */
+.top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:14px clamp(14px,3vw,32px)}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand h1{font-size:21px;font-weight:800}
+.tools{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:13.5px;color:var(--muted)}
+.tools label{display:flex;gap:6px;align-items:center}
+.tools select{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 13px;font-weight:600;font-size:13.5px;transition:transform .12s, background .12s}
+.btn:hover{background:var(--panel2)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.primary:hover{background:var(--ink);opacity:.9}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.small{padding:5px 9px;font-size:12.5px;border-radius:8px}
+.btn.apply{background:var(--okSoft);border-color:color-mix(in srgb,var(--ok) 45%,transparent);color:var(--ok)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+
+/* portada */
+.landing{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(20px,4vw,56px);align-items:center;max-width:1180px;margin:0 auto;padding:clamp(16px,5vw,64px) clamp(14px,3vw,32px)}
+.landing h2{font-size:clamp(32px,5.2vw,56px);line-height:1.02;font-weight:800;max-width:14ch}
+.landing p.lead{color:var(--muted);font-size:17px;max-width:46ch;margin:16px 0 26px}
+.drop{border:2px dashed color-mix(in srgb,var(--ink) 30%,transparent);border-radius:20px;padding:26px;background:var(--panel);display:flex;gap:16px;align-items:center;flex-wrap:wrap;transition:border-color .15s, background .15s}
+.drop.over{border-color:var(--phones);background:color-mix(in srgb,var(--phones) 8%,var(--panel))}
+.drop strong{font-family:var(--display);font-size:19px;display:block}
+.drop span{color:var(--muted);font-size:14px}
+.err{margin-top:12px;color:var(--bad);font-weight:600;min-height:1.4em}
+.privacy{font-size:13px;color:var(--muted);margin-top:10px}
+.demo{background:var(--panel);border-radius:22px;box-shadow:var(--shadow);padding:20px 20px 16px;border:1px solid var(--line)}
+.demo h3{font-size:16px;margin-bottom:12px}
+.demoLane{position:relative;height:104px;background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),var(--grid) calc(25% - 1px) 25%);border-radius:10px;border:1px solid var(--line);margin-bottom:12px}
+.dRow{position:absolute;left:0;right:0;height:38px}
+.dRow.r1{top:8px}.dRow.r2{top:56px}
+.dChip{position:absolute;top:5px;height:28px;width:19%;border-radius:8px;background:var(--phones);color:var(--chipInk);font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:center;transition:left .5s cubic-bezier(.3,.8,.3,1), background .3s}
+.demoLane.clash .dChip{background:repeating-linear-gradient(45deg,var(--bad) 0 6px,color-mix(in srgb,var(--bad) 70%,#000) 6px 12px);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.65)}
+.dSeam{position:absolute;top:0;bottom:0;left:50%;width:19%;background:color-mix(in srgb,var(--bad) 14%,transparent);border-left:1px solid color-mix(in srgb,var(--bad) 45%,transparent);border-right:1px solid color-mix(in srgb,var(--bad) 45%,transparent);transition:opacity .3s}
+.demoLane:not(.clash) .dSeam{opacity:0}
+.dTimes{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin:-6px 0 12px}
+.demo p{margin:0 0 12px;font-size:14px;min-height:2.8em}
+
+/* espacio de trabajo */
+.ws{max-width:1560px;margin:0 auto;padding:0 clamp(12px,2.4vw,28px) 96px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 12px}
+.tab{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:96px;padding:9px 13px;border-radius:14px;border:1px solid var(--line);background:var(--panel);text-align:left}
+.tab b{font-family:var(--display);font-size:17px;font-weight:700}
+.tab small{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab[aria-selected="true"] small{color:color-mix(in srgb,var(--bg) 75%,transparent)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);display:inline-block}
+.dot.bad{background:var(--bad)}.dot.warn{background:var(--warn)}
+.sumbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:2px 0 14px}
+.sumbar p{margin:0;font-family:var(--display);font-size:clamp(18px,2.2vw,24px);font-weight:600;letter-spacing:-.01em;margin-right:auto;max-width:62ch}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.inspector{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel2);min-height:54px;font-size:13.5px}
+.inspector .who2{font-weight:600}
+.inspector .muted{color:var(--muted)}
+.inspector input[type=time]{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 6px}
+.zoom{margin-left:auto;display:flex;gap:6px;align-items:center}
+
+.boardScroll{overflow:auto;max-height:68vh;position:relative;scrollbar-width:thin}
+.boardInner{min-width:calc(var(--who) + var(--col)*34)}
+.axis{display:flex;position:sticky;top:0;z-index:6;background:var(--panel);border-bottom:1px solid var(--line)}
+.axis .who{display:flex;align-items:flex-end;padding:0 10px 4px;font-size:12px;color:var(--muted)}
+.ticks{position:relative;height:30px;width:calc(var(--col)*34);flex:none}
+.tick{position:absolute;bottom:0;height:100%;border-left:1px solid var(--line);padding:6px 0 0 5px;font-size:12px;color:var(--muted);font-weight:500}
+.lane{position:relative}
+.laneHead{display:flex;align-items:center;gap:10px;position:sticky;left:0;width:max-content;min-width:var(--who);padding:8px 12px 6px;font-family:var(--display);font-weight:700;font-size:15px}
+.laneHead i{width:10px;height:10px;border-radius:3px;background:var(--q)}
+.laneHead small{font:500 12.5px var(--body);color:var(--muted)}
+.laneHead .flag{background:var(--badSoft);color:var(--bad);border-radius:999px;padding:1px 9px;font:600 12px var(--body)}
+.laneHead button{border:0;background:transparent;color:var(--muted);text-decoration:underline;font-size:12.5px;padding:0}
+.lane + .lane{border-top:1px solid var(--line)}
+.rowL{display:flex;height:36px;border-top:1px solid var(--grid);position:relative;z-index:2}
+.who{position:sticky;left:0;z-index:4;width:var(--who);flex:none;background:var(--panel);padding:3px 10px;display:flex;flex-direction:column;justify-content:center;line-height:1.15;border-right:1px solid var(--line)}
+.who b{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{position:relative;flex:none;width:calc(var(--col)*34);background:repeating-linear-gradient(90deg,transparent 0 calc(var(--col)*2 - 1px),var(--grid) calc(var(--col)*2 - 1px) calc(var(--col)*2))}
+.shift{position:absolute;top:5px;bottom:5px;border-radius:7px;background:color-mix(in srgb,var(--q) 12%,transparent);border:1px solid color-mix(in srgb,var(--q) 32%,transparent)}
+.shift.invalid{width:calc(var(--col)*2)!important;border:1px dashed var(--bad);background:var(--badSoft);color:var(--bad);font-size:11px;padding:3px 5px;white-space:nowrap}
+.chip{overflow:hidden;white-space:nowrap;position:absolute;top:4px;height:28px;border-radius:8px;background:var(--q);color:var(--chipInk);font-weight:600;font-size:11px;letter-spacing:-.01em;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none;z-index:3;border:0;padding:0;box-shadow:0 1px 0 rgba(0,0,0,.25);transition:box-shadow .15s}
+.chip.drag{cursor:grabbing;z-index:9;box-shadow:0 8px 18px -6px rgba(0,0,0,.5);transition:none}
+.chip.bad{background:repeating-linear-gradient(45deg,var(--bad) 0 6px,color-mix(in srgb,var(--bad) 68%,#000) 6px 12px);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.65)}
+.chip.sel{outline:3px solid var(--ink);outline-offset:1px}
+.chip.changed::after{content:"";position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--ok);border:2px solid var(--panel)}
+@media (prefers-reduced-motion:no-preference){.chip.pulse{animation:ring 1s ease-out 2}}
+@keyframes ring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ink) 55%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+.seam{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--bad) 13%,transparent);border-left:1px solid color-mix(in srgb,var(--bad) 45%,transparent);border-right:1px solid color-mix(in srgb,var(--bad) 45%,transparent);z-index:1;pointer-events:none}
+@media (prefers-reduced-motion:no-preference){.seam{animation:seam 1.4s ease-in-out 3}}
+@keyframes seam{50%{background:color-mix(in srgb,var(--bad) 26%,transparent)}}
+.covRow{display:flex;height:70px;border-top:1px solid var(--grid)}
+.covTrack{position:relative;flex:none;width:calc(var(--col)*34)}
+.bar{position:absolute;bottom:3px;width:calc(var(--col) - 6px);margin-left:3px;border-radius:5px 5px 2px 2px;background:color-mix(in srgb,var(--q) 20%,transparent);border:1px solid color-mix(in srgb,var(--q) 40%,transparent);display:flex;align-items:flex-end;justify-content:center}
+.bar i{display:block;width:100%;border-radius:4px 4px 2px 2px;background:var(--q);font:600 10.5px/1 var(--body);color:var(--chipInk);text-align:center;padding-top:2px;font-style:normal;min-height:3px}
+.bar.low i{background:var(--bad);color:#fff}
+.bar.low{border-color:var(--bad)}
+
+/* alertas */
+.side{position:sticky;top:12px;max-height:calc(100vh - 100px);display:flex;flex-direction:column}
+.sideHead{padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+.sideHead h2{font-size:18px;margin-bottom:8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:500}
+.fchip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cards{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0}
+.sideHead{flex:none}
+.card{display:flex;flex:none;border-radius:12px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+.card .rail{width:5px;flex:none;background:var(--c)}
+.card .bd{padding:10px 12px 11px;min-width:0;flex:1}
+.card.queue,.card.task,.card.cover.bad{--c:var(--bad)}
+.card.cover.warn{--c:var(--warn)}
+.card.data{--c:var(--info)}
+.card h3{font-size:14.5px;line-height:1.25;font-weight:600;font-family:var(--body)}
+.card p{margin:4px 0 8px;font-size:13px;color:var(--muted)}
+.card .acts{display:flex;gap:6px;flex-wrap:wrap}
+.empty{padding:26px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;font-family:var(--display);font-size:17px;color:var(--ok);margin-bottom:4px}
+.tiny{font-size:12.5px;color:var(--muted);padding:0 14px 12px}
+
+/* barra de exportación */
+.exportBar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px clamp(12px,2.4vw,28px) calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.exportBar .msg{margin-right:auto;font-size:14px}
+.exportBar .msg b{font-family:var(--display);font-size:16px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:12px;display:flex;gap:12px;align-items:center;z-index:40;box-shadow:var(--shadow);max-width:min(92vw,560px);font-size:14px}
+.toast[hidden]{display:none}
+.toast button{background:transparent;border:1px solid color-mix(in srgb,var(--bg) 40%,transparent);color:var(--bg);border-radius:8px;padding:3px 10px;font-weight:600}
+dialog{border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--ink);padding:0;max-width:min(94vw,820px);width:100%;box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(8,12,24,.55)}
+.dlgHead{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+.dlgHead h2{font-size:19px}
+.dlgBody{padding:6px 18px 16px;max-height:60vh;overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-weight:600;color:var(--muted);padding:8px 6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid var(--grid)}
+.arrow{color:var(--muted)}
+
+@media (max-width:980px){
+  .landing{grid-template-columns:1fr}
+  .grid{grid-template-columns:1fr}
+  .side{position:static;max-height:none}
+  .boardScroll{max-height:60vh}
+  :root{--who:132px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg width="34" height="26" viewBox="0 0 34 26" aria-hidden="true"><rect x="1" y="2" width="18" height="9" rx="4" fill="#2F5BEA"/><rect x="13" y="15" width="18" height="9" rx="4" fill="#D3263A"/></svg>
+    <h1>Revisor de breaks</h1>
+  </div>
+  <div class="tools" id="tools" hidden>
+    <label>Duración del break
+      <select id="dur"><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option></select>
+    </label>
+    <label>Mínimo trabajando
+      <select id="minc"><option value="1">1 persona</option><option value="2">2 personas</option></select>
+    </label>
+    <button class="btn" id="newFile">Cargar otro archivo</button>
+  </div>
+</header>
+
+<main id="app"></main>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <div class="dlgHead"><h2 id="dlgTitle">Cambios hechos</h2><button class="btn small" id="dlgClose">Cerrar</button></div>
+  <div class="dlgBody" id="dlgBody"></div>
+</dialog>
+<input type="file" id="file" accept=".xlsx" hidden>
+
+<script>
+/* ===== CORE: lectura, reglas, sugerencias y parche del xlsx ===== */
+const DAYS_ES = { Monday: 'Lunes', Tuesday: 'Martes', Wednesday: 'Miércoles', Thursday: 'Jueves', Friday: 'Viernes', Saturday: 'Sábado', Sunday: 'Domingo' };
+const QCHK = ['Phones', 'Chats', 'Tickets', 'Casino'];
+const LANES = ['Phones', 'Chats', 'Tickets', 'Casino', 'Overflow'];
+const PRI = { 'Vip': 0, 'Senior': 1, 'Tier 3': 2, 'Third Party': 2, 'Tier 2': 3, 'Tier 1': 4, 'New Hire': 6 };
+const IGN = new Set(['Crypto']);
+const CFG = { dur: 30, minCover: 1 };
+const S0 = 360, S1 = 1380, STEP = 30;
+const OFFS = [30, -30, 60, -60, 90, -90, 120, -120, 150, -150];
+
+function fmt(m) {
+  if (m == null) return '—';
+  const h = Math.floor(m / 60), mm = m % 60;
+  return (h % 12 || 12) + ':' + String(mm).padStart(2, '0') + ' ' + (h < 12 || h === 24 ? 'am' : 'pm');
+}
+function fmtShort(m) { return fmt(m).replace(' ', ''); }
+function fmt24(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+
+function toMin(cell) {
+  if (!cell || cell.v == null || cell.v === '') return null;
+  const v = cell.v;
+  if (typeof v === 'number') return Math.round((v % 1) * 1440);
+  if (v instanceof Date) return v.getHours() * 60 + v.getMinutes();
+  if (typeof v === 'string') {
+    const m = v.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!m) return null;
+    let h = +m[1];
+    if (m[3]) { const pm = m[3].toUpperCase() === 'PM'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+    return h * 60 + +m[2];
+  }
+  return null;
+}
+
+function grp(area) {
+  const a = (area || '').trim();
+  return ['Tier 1', 'Tier 2', 'Tier 3', 'Senior'].includes(a) ? 'Tiers' : a;
+}
+
+function tokens(r) {
+  if (!r.task) return [];
+  return String(r.task).split('|').map(s => s.trim()).filter(p =>
+    p && !/\d{1,2}(:\d{2})?\s*(AM|PM)/i.test(p) && !/^training/i.test(p) && !/^coaching with/i.test(p));
+}
+
+/* ---------- lectura del workbook ---------- */
+function parseWorkbook(wb) {
+  const days = [], warnings = [];
+  wb.SheetNames.forEach((sheetName, di) => {
+    const ws = wb.Sheets[sheetName];
+    if (!ws || !ws['!ref']) return;
+    const ref = XLSX.utils.decode_range(ws['!ref']);
+    const last = ref.e.r + 1;
+    const get = (c, r) => ws[String.fromCharCode(64 + c) + r];
+    let header = null;
+    for (let r = 1; r <= last; r++) {
+      if ((get(8, r) && get(8, r).v === 'Break 1') || (get(17, r) && get(17, r).v === 'Break 1')) { header = r; break; }
+    }
+    if (!header) { warnings.push('No encontré la fila “Break 1” en la hoja ' + sheetName + '; la dejé fuera.'); return; }
+    const recs = [];
+    const blocks = [
+      { blk: 'AM', s: 2, e: 3, area: 4, name: 5, q: 6, task: 7, b1: 8, b2: 9 },
+      { blk: 'PM', s: 11, e: 12, area: 13, name: 14, q: 15, task: 16, b1: 17, b2: 18 }
+    ];
+    for (let r = header + 1; r <= last; r++) {
+      for (const b of blocks) {
+        const nm = get(b.name, r);
+        if (!nm || nm.v == null || String(nm.v).trim() === '') continue;
+        const b1 = toMin(get(b.b1, r)), b2 = toMin(get(b.b2, r));
+        const colL = c => String.fromCharCode(64 + c);
+        recs.push({
+          id: di + '-' + b.blk + '-' + r, blk: b.blk, row: r,
+          area: (get(b.area, r) ? String(get(b.area, r).v).trim() : ''),
+          name: String(nm.v).trim(),
+          queue: (get(b.q, r) ? String(get(b.q, r).v).trim() : ''),
+          task: (get(b.task, r) ? String(get(b.task, r).v) : ''),
+          start: toMin(get(b.s, r)), end: toMin(get(b.e, r)),
+          b1, b2, o1: b1, o2: b2,
+          a1: colL(b.b1) + r, a2: colL(b.b2) + r,
+          ae: colL(b.e) + r, oe: toMin(get(b.e, r))
+        });
+      }
+    }
+    const m = sheetName.match(/^([A-Za-z]+)\s*(\d+)?/);
+    days.push({ sheetName, dow: m ? m[1] : sheetName, dom: m && m[2] ? m[2] : '', label: (m && DAYS_ES[m[1]]) || sheetName, recs });
+  });
+  return { days, warnings };
+}
+
+/* ---------- reglas ---------- */
+function ov(a, b) { return Math.abs(a - b) < CFG.dur; }
+function breaksOf(r) { return ['b1', 'b2'].filter(k => r[k] != null).map(k => ({ r, k, t: r[k] })); }
+
+function conflictPairs(recs) {
+  const pairs = [];
+  for (const q of QCHK) {
+    const L = [];
+    for (const r of recs) if (r.queue === q) L.push(...breaksOf(r));
+    for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++)
+      if (L[i].r !== L[j].r && ov(L[i].t, L[j].t)) pairs.push({ type: 'queue', key: q, a: L[i], b: L[j] });
+  }
+  const groups = new Map();
+  const add = (key, base, role, r) => {
+    if (!groups.has(key)) groups.set(key, { base, main: [], second: [] });
+    groups.get(key)[role].push(r);
+  };
+  for (const r of recs) {
+    for (const t of tokens(r)) {
+      const second = /^2nd\s/i.test(t);
+      const base = second ? t.replace(/^2nd\s+/i, '').trim() : t;
+      if (IGN.has(base)) continue;
+      add(base + '|' + grp(r.area), base, second ? 'second' : 'main', r);
+    }
+    if (r.queue === 'Tickets' || r.queue === 'Casino') add(r.queue + '|' + grp(r.area), r.queue, 'main', r);
+  }
+  for (const g of groups.values()) {
+    for (const m of g.main) for (const s of g.second) {
+      if (m === s) continue;
+      for (const a of breaksOf(m)) for (const b of breaksOf(s))
+        if (ov(a.t, b.t)) pairs.push({ type: 'task', key: g.base, a, b, aRole: 'main', bRole: '2nd' });
+    }
+  }
+  return pairs;
+}
+
+function coverage(recs, q) {
+  const dur = CFG.dur, out = [];
+  const qr = recs.filter(r => r.queue === q && r.start != null && r.end != null && r.end > r.start);
+  for (let s = S0; s < S1; s += STEP) {
+    const on = qr.filter(r => r.start <= s && s < r.end);
+    const br = on.filter(r => ['b1', 'b2'].some(k => r[k] != null && r[k] < s + STEP && r[k] + dur > s));
+    out.push({ s, on: on.length, work: on.length - br.length, onBreak: br.map(r => r.name) });
+  }
+  return out;
+}
+
+function thinCount(recs) {
+  let n = 0;
+  for (const q of ['Phones', 'Chats']) for (const c of coverage(recs, q)) if (c.on >= 2 && c.work <= CFG.minCover) n++;
+  return n;
+}
+
+function buildIssues(day) {
+  const recs = day.recs, issues = [];
+  const pairs = conflictPairs(recs);
+  const byKey = new Map();
+  for (const p of pairs) { const k = p.type + '|' + p.key; if (!byKey.has(k)) byKey.set(k, []); byKey.get(k).push(p); }
+  for (const ps of byKey.values()) {
+    const parent = new Map(), node = new Map();
+    const id = it => it.r.id + ':' + it.k;
+    const find = x => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+    for (const p of ps) {
+      [[p.a, p.aRole], [p.b, p.bRole]].forEach(([it, role]) => {
+        const i = id(it);
+        if (!parent.has(i)) { parent.set(i, i); node.set(i, { r: it.r, k: it.k, role: role || null }); }
+        else if (role) node.get(i).role = role;
+      });
+      parent.set(find(id(p.a)), find(id(p.b)));
+    }
+    const comps = new Map();
+    for (const i of parent.keys()) { const root = find(i); if (!comps.has(root)) comps.set(root, []); comps.get(root).push(node.get(i)); }
+    for (const items of comps.values()) {
+      items.forEach(it => { it.t = it.r[it.k]; });
+      items.sort((a, b) => a.t - b.t);
+      issues.push({ type: ps[0].type, key: ps[0].key, items, time: items[0].t, id: ps[0].type + '|' + ps[0].key + '|' + items.map(i => i.r.id + i.k + i.t).join(',') });
+    }
+  }
+  // cobertura
+  for (const q of ['Phones', 'Chats']) {
+    const cov = coverage(recs, q);
+    const firstOn = cov.findIndex(c => c.on > 0);
+    let lastOn = -1; cov.forEach((c, i) => { if (c.on > 0) lastOn = i; });
+    const kindOf = (c, i) => {
+      if (firstOn >= 0 && i >= firstOn && i <= lastOn && c.on === 0) return 'empty';
+      if (c.on >= 2 && c.work <= CFG.minCover) return 'thin';
+      if (c.on === 1) return 'solo';
+      return null;
+    };
+    let run = null;
+    const flush = () => { if (run) { issues.push(run); run = null; } };
+    cov.forEach((c, i) => {
+      const kind = kindOf(c, i);
+      if (!kind) { flush(); return; }
+      if (run && run.kind === kind && run.to === c.s) { run.to = c.s + STEP; run.minWork = Math.min(run.minWork, c.work); c.onBreak.forEach(n => { if (!run.names.includes(n)) run.names.push(n); }); }
+      else { flush(); run = { type: 'cover', key: q, kind, from: c.s, to: c.s + STEP, time: c.s, minWork: c.work, on: c.on, names: [...c.onBreak], id: 'cover|' + q + '|' + kind + '|' + c.s }; }
+    });
+    flush();
+  }
+  // datos
+  for (const r of recs) {
+    if (r.start != null && r.end != null && r.end <= r.start)
+      issues.push({ type: 'data', key: 'turno', time: r.start, rec: r, text: r.name + ' tiene turno ' + fmt(r.start) + ' a ' + fmt(r.end), hint: 'La salida no es posterior a la entrada, así que no cuento a esta persona en la cobertura.', fix: { rec: r, to: r.start + 480 }, id: 'data|turno|' + r.id });
+    else if (r.start != null && r.end != null && r.b1 == null && r.b2 == null && (r.end - r.start) >= 360)
+      issues.push({ type: 'data', key: 'sinbreak', time: r.start, rec: r, text: r.name + ' no tiene breaks (' + fmt(r.start) + '–' + fmt(r.end) + ')', hint: 'Confirma si es a propósito (por ejemplo, capacitación).', id: 'data|sinbreak|' + r.id });
+    else if (r.start != null && r.end != null && r.end > r.start && r.b1 != null && r.b2 != null) {
+      const o1 = r.b1 - r.start, o2 = r.b2 - r.start, gap = r.b2 - r.b1, left = r.end - r.b2;
+      const why = [];
+      if (r.b1 < r.start || r.b2 + CFG.dur > r.end) why.push('un break cae fuera del turno');
+      else {
+        if (o1 < 90 || o1 > 270) why.push('el Break 1 queda a ' + (o1 / 60).toFixed(1) + ' h de la entrada');
+        if (o2 < 270 || left < 60) why.push('el Break 2 queda a ' + (o2 / 60).toFixed(1) + ' h de la entrada y ' + (left / 60).toFixed(1) + ' h antes de salir');
+        if (gap < 150) why.push('entre breaks hay solo ' + (gap / 60).toFixed(1) + ' h');
+      }
+      if (why.length) issues.push({ type: 'data', key: 'horario', time: r.b1, rec: r, text: r.name + ': ' + why.join('; '), hint: 'Turno ' + fmt(r.start) + '–' + fmt(r.end) + ', breaks ' + fmt(r.b1) + ' y ' + fmt(r.b2) + '.', id: 'data|horario|' + r.id + r.b1 + r.b2 });
+    }
+  }
+  issues.sort((a, b) => a.time - b.time);
+  return issues;
+}
+
+/* ---------- sugerencias ---------- */
+function badness(recs) { return conflictPairs(recs).length * 100 + thinCount(recs); }
+
+function validMove(r, k, nt) {
+  if (r.start == null || r.end == null || r.end <= r.start) return false;
+  if (nt < r.start || nt + CFG.dur > r.end || nt % STEP !== 0) return false;
+  if (k === 'b1') { if (nt < r.start + 90 || nt > r.start + 270) return false; if (r.b2 != null && r.b2 - nt < 150) return false; }
+  else { if (nt < r.start + 270 || nt > r.end - 60) return false; if (r.b1 != null && nt - r.b1 < 150) return false; }
+  return true;
+}
+
+function bestMove(day, cands) {
+  const recs = day.recs, base = badness(recs);
+  let best = null;
+  for (const { r, k } of cands) {
+    const old = r[k];
+    for (const off of OFFS) {
+      const nt = old + off;
+      if (!validMove(r, k, nt)) continue;
+      r[k] = nt;
+      const b = badness(recs);
+      r[k] = old;
+      if (b < base) {
+        const sc = [b, -(PRI[r.area] != null ? PRI[r.area] : 3), Math.abs(off)];
+        if (!best || sc[0] < best.sc[0] || (sc[0] === best.sc[0] && (sc[1] < best.sc[1] || (sc[1] === best.sc[1] && sc[2] < best.sc[2]))))
+          best = { sc, r, k, from: old, to: nt };
+      }
+    }
+  }
+  return best ? { r: best.r, k: best.k, from: best.from, to: best.to } : null;
+}
+
+function candidatesFor(day, issue) {
+  if (issue.type === 'queue' || issue.type === 'task') return issue.items.map(i => ({ r: i.r, k: i.k }));
+  if (issue.type === 'cover' && issue.kind === 'thin') {
+    const c = [];
+    for (const r of day.recs) if (r.queue === issue.key) for (const k of ['b1', 'b2'])
+      if (r[k] != null && r[k] < issue.to && r[k] + CFG.dur > issue.from) c.push({ r, k });
+    return c;
+  }
+  return [];
+}
+
+function fixTime(day, r) {
+  const base = badness(day.recs);
+  for (const k of ['b1', 'b2']) {
+    if (r[k] == null || validMove(r, k, r[k])) continue;
+    const cand = OFFS.slice().sort((a, b) => Math.abs(a) - Math.abs(b) || b - a);
+    const wide = []; for (let o = 30; o <= 300; o += 30) wide.push(o, -o);
+    wide.sort((a, b) => Math.abs(a) - Math.abs(b) || b - a);
+    let best = null;
+    for (const off of wide) {
+      const nt = r[k] + off;
+      if (!validMove(r, k, nt)) continue;
+      const old = r[k]; r[k] = nt; const b = badness(day.recs); r[k] = old;
+      if (b <= base) { best = { r, k, from: old, to: nt }; break; }
+    }
+    if (best) return best;
+  }
+  return null;
+}
+
+function suggestFor(day, issue) {
+  if (issue.type === 'data' && issue.key === 'horario') return fixTime(day, issue.rec);
+  const c = candidatesFor(day, issue);
+  return c.length ? bestMove(day, c) : null;
+}
+
+function autoFix(day) {
+  const moves = [];
+  for (let n = 0; n < 120; n++) {
+    const issues = buildIssues(day).filter(i => i.type === 'queue' || i.type === 'task' || (i.type === 'cover' && i.kind === 'thin'));
+    let done = false;
+    for (const is of issues) {
+      const m = suggestFor(day, is);
+      if (m) { m.r[m.k] = m.to; moves.push(m); done = true; break; }
+    }
+    if (!done) break;
+  }
+  return moves;
+}
+
+/* ---------- parche del xlsx (conserva formato) ---------- */
+function xmlUnesc(s) { return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&'); }
+function attr(tag, name) { const m = tag.match(new RegExp('\\b' + name + '="([^"]*)"')); return m ? xmlUnesc(m[1]) : null; }
+
+async function patchXlsx(buf, edits) {
+  const zip = await JSZip.loadAsync(buf);
+  const wbXml = await zip.file('xl/workbook.xml').async('string');
+  const relXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+  const rels = {};
+  (relXml.match(/<Relationship\b[^>]*>/g) || []).forEach(t => { rels[attr(t, 'Id')] = attr(t, 'Target'); });
+  const sheetPath = {};
+  (wbXml.match(/<sheet\b[^>]*>/g) || []).forEach(t => {
+    const name = attr(t, 'name'), rid = attr(t, 'r:id');
+    let tgt = rels[rid]; if (!tgt) return;
+    tgt = tgt.replace(/^\//, ''); if (!tgt.startsWith('xl/')) tgt = 'xl/' + tgt;
+    sheetPath[name] = tgt;
+  });
+  const bySheet = {};
+  edits.forEach(e => { (bySheet[e.sheet] = bySheet[e.sheet] || []).push(e); });
+  let patched = 0;
+  for (const [sheet, list] of Object.entries(bySheet)) {
+    const p = sheetPath[sheet];
+    if (!p || !zip.file(p)) throw new Error('No encontré la hoja “' + sheet + '” dentro del archivo.');
+    let xml = await zip.file(p).async('string');
+    for (const e of list) {
+      const re = new RegExp('<c r="' + e.addr + '"([^>]*?)(?:/>|>([\\s\\S]*?)</c>)');
+      const m = xml.match(re);
+      if (!m) throw new Error('No encontré la celda ' + e.addr + ' en ' + sheet + '.');
+      const attrs = m[1].replace(/\s+t="[^"]*"/, '');
+      const f = m[2] ? (m[2].match(/<f[\s\S]*?<\/f>|<f[^>]*\/>/) || [''])[0] : '';
+      const repl = '<c r="' + e.addr + '"' + attrs + '>' + f + '<v>' + String(e.value) + '</v></c>';
+      xml = xml.replace(re, () => repl);
+      patched++;
+    }
+    zip.file(p, xml);
+  }
+  const out = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+  return { data: out, patched };
+}
+
+function collectEdits(days) {
+  const edits = [];
+  days.forEach(d => d.recs.forEach(r => {
+    if (r.end !== r.oe && r.end != null) edits.push({ sheet: d.sheetName, addr: r.ae, value: r.end / 1440 });
+    if (r.b1 !== r.o1 && r.b1 != null) edits.push({ sheet: d.sheetName, addr: r.a1, value: r.b1 / 1440 });
+    if (r.b2 !== r.o2 && r.b2 != null) edits.push({ sheet: d.sheetName, addr: r.a2, value: r.b2 / 1440 });
+  }));
+  return edits;
+}
+
+</script>
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const SHORT = { Lunes:'Lun', Martes:'Mar', 'Miércoles':'Mié', Jueves:'Jue', Viernes:'Vie', 'Sábado':'Sáb', Domingo:'Dom' };
+const QCOL = { Phones:'var(--phones)', Chats:'var(--chats)', Tickets:'var(--tickets)', Casino:'var(--casino)', Overflow:'var(--other)', Otros:'var(--other)' };
+const S = { buf:null, name:'', days:[], di:0, sel:null, undo:[], ignored:new Set(), showIgnored:false, filter:'all', open:{ Overflow:false, Otros:false }, col:64, dl:undefined };
+const app = $('#app');
+let drag = null, toastTimer = null, pendingFocus = null;
+
+const pl = (n, a, b) => n === 1 ? a : b;
+const first = n => String(n).split(' ')[0];
+const day = () => S.days[S.di];
+const laneOf = r => LANES.includes(r.queue) ? r.queue : 'Otros';
+const kLabel = k => k === 'b1' ? 'B1' : 'B2';
+const isChanged = (r, k) => r[k] !== (k === 'b1' ? r.o1 : r.o2);
+const findRec = id => { for (const d of S.days) for (const r of d.recs) if (r.id === id) return r; return null; };
+const dayOfRec = r => S.days.find(d => d.recs.includes(r));
+const joinNames = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1];
+const overflowAt = (recs, s) => recs.filter(r => r.queue === 'Overflow' && r.start <= s && s < r.end && !['b1','b2'].some(k => r[k] != null && r[k] < s + STEP && r[k] + CFG.dur > s)).length;
+
+function isActive(i){ return i.type === 'queue' || i.type === 'task' || (i.type === 'cover' && (i.kind === 'thin' || i.kind === 'empty')); }
+
+/* ---------- carga de archivo ---------- */
+async function loadFile(file){
+  const err = $('#err'); if (err) err.textContent = '';
+  try{
+    if (!/\.xlsx$/i.test(file.name)) throw new Error('Necesito un archivo .xlsx. Si es .xlsm o .xls, guarda una copia como .xlsx y súbela.');
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array' });
+    const out = parseWorkbook(wb);
+    if (!out.days.length) throw new Error('No encontré hojas con la tabla de breaks (la fila con “Break 1”). ¿Es el archivo de Tasks del día?');
+    S.buf = buf; S.name = file.name; S.days = out.days; S.warn = out.warnings; S.di = 0; S.sel = null; S.undo = []; S.ignored = new Set();
+    $('#tools').hidden = false;
+    render();
+  }catch(e){
+    const msg = e && e.message ? e.message : 'No pude leer el archivo.';
+    if (err) err.textContent = msg; else toast(msg);
+  }
+}
+
+/* ---------- movimientos ---------- */
+function setBreak(rec, k, t, opts){
+  opts = opts || {};
+  const from = rec[k];
+  if (from === t) return;
+  rec[k] = t;
+  if (!opts.silent){
+    S.undo.push({ moves:[{ rec, k, from }] });
+    S.sel = { id:rec.id, k };
+    render();
+    toastMsg('Movido ' + first(rec.name) + ' ' + kLabel(k) + ': ' + fmt(from) + ' a ' + fmt(t) + '.', true);
+  }
+}
+function undoLast(){
+  const u = S.undo.pop(); if (!u) return;
+  u.moves.slice().reverse().forEach(m => { m.rec[m.k] = m.from; });
+  render(); toastMsg('Deshice el último cambio.', false);
+}
+function applySuggestion(d, issue){
+  const m = suggestFor(d, issue);
+  if (!m) return;
+  m.r[m.k] = m.to;
+  S.undo.push({ moves:[{ rec:m.r, k:m.k, from:m.from }] });
+  S.sel = { id:m.r.id, k:m.k }; pendingFocus = m.r.id + ':' + m.k;
+  render();
+  toastMsg('Movido ' + first(m.r.name) + ' ' + kLabel(m.k) + ': ' + fmt(m.from) + ' a ' + fmt(m.to) + '.', true);
+}
+function runAuto(days){
+  const all = []; let left = 0, blocked = 0;
+  days.forEach(d => {
+    const mv = autoFix(d);
+    mv.forEach(m => all.push({ rec:m.r, k:m.k, from:m.from }));
+    const rest = buildIssues(d).filter(i => i.type === 'queue' || i.type === 'task');
+    left += rest.length;
+    rest.forEach(i => { if (i.items.some(x => x.r.end != null && x.r.start != null && x.r.end <= x.r.start)) blocked++; });
+  });
+  if (all.length) S.undo.push({ moves:all });
+  render();
+  let msg = all.length ? 'Hice ' + all.length + ' ' + pl(all.length, 'cambio', 'cambios') + '. Revísalos y deshaz los que no te gusten.' : 'No encontré movimientos que mejoren algo.';
+  if (left) msg += ' Quedan ' + left + ' ' + pl(left, 'choque', 'choques') + (blocked ? '; depende de corregir turnos con salida mal escrita (avisos de datos).' : ' sin salida automática.');
+  toastMsg(msg, all.length > 0);
+}
+function applyEndFix(rec, to){
+  const from = rec.end; rec.end = to;
+  S.undo.push({ moves:[{ rec, k:'end', from }] });
+  render(); toastMsg('Salida de ' + first(rec.name) + ' ahora es ' + fmt(to) + '.', true);
+}
+
+/* ---------- toast ---------- */
+function toastMsg(text, withUndo){
+  const t = $('#toast');
+  t.innerHTML = '<span>' + esc(text) + '</span>' + (withUndo ? '<button type="button" data-act="undo">Deshacer</button>' : '');
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, withUndo ? 9000 : 5000);
+}
+const toast = m => toastMsg(m, false);
+$('#toast').addEventListener('click', e => { if (e.target.closest('[data-act="undo"]')) { undoLast(); } });
+
+/* ---------- render ---------- */
+function render(){
+  if (!S.days.length){ renderLanding(); return; }
+  const scroller = document.querySelector('.boardScroll');
+  const sl = scroller ? scroller.scrollLeft : 0, st = scroller ? scroller.scrollTop : 0;
+  const cardsEl = document.querySelector('.cards'); const cst = cardsEl ? cardsEl.scrollTop : 0;
+  document.documentElement.style.setProperty('--col', S.col + 'px');
+  const d = day();
+  const all = S.days.map(buildIssues);
+  const issues = all[S.di];
+  app.innerHTML = '<div class="ws">' + tabsHTML(all) + sumHTML(d, issues) +
+    '<div class="grid"><section class="panel" aria-label="Tablero del día">' + inspectorHTML() + boardHTML(d, issues) + '</section>' + sideHTML(d, issues) + '</div></div>' + exportHTML();
+  const sc = document.querySelector('.boardScroll');
+  if (sc){ sc.scrollLeft = sl; sc.scrollTop = st; }
+  const ce = document.querySelector('.cards'); if (ce) ce.scrollTop = cst;
+  if (pendingFocus){
+    const el = document.querySelector('[data-chip="' + pendingFocus + '"]');
+    if (el){ el.scrollIntoView({ block:'nearest', inline:'center' }); el.classList.add('pulse'); }
+    pendingFocus = null;
+  }
+}
+
+function tabsHTML(all){
+  return '<div class="tabs" role="tablist" aria-label="Días">' + S.days.map((d, i) => {
+    const is = all[i].filter(x => isActive(x) && !S.ignored.has(x.id));
+    const soft = all[i].filter(x => !isActive(x) && !S.ignored.has(x.id)).length;
+    const cls = is.length ? 'bad' : (soft ? 'warn' : '');
+    const lab = is.length ? is.length + ' ' + pl(is.length, 'alerta', 'alertas') : (soft ? soft + ' ' + pl(soft, 'aviso', 'avisos') : 'Todo bien');
+    return '<button role="tab" class="tab" data-act="tab" data-i="' + i + '" aria-selected="' + (i === S.di) + '"><b>' + esc(SHORT[d.label] || d.label) + ' ' + esc(d.dom) + '</b><small><span class="dot ' + cls + '"></span>' + lab + '</small></button>';
+  }).join('') + '</div>';
+}
+
+function sumHTML(d, issues){
+  const act = issues.filter(i => !S.ignored.has(i.id));
+  const nq = act.filter(i => i.type === 'queue').length, nt = act.filter(i => i.type === 'task').length;
+  const nc = act.filter(i => i.type === 'cover' && (i.kind === 'thin' || i.kind === 'empty')).length;
+  const nm = act.length - nq - nt - nc;
+  let s;
+  if (nq + nt + nc === 0) s = d.label + ' ' + d.dom + ': sin choques ni huecos de cobertura.';
+  else s = d.label + ' ' + d.dom + ': ' + nq + ' ' + pl(nq, 'choque', 'choques') + ' de break, ' + nt + ' de task y ' + nc + ' ' + pl(nc, 'hueco', 'huecos') + ' de cobertura.';
+  if (nm) s += ' Además ' + nm + ' ' + pl(nm, 'aviso menor', 'avisos menores') + '.';
+  const anyChange = d.recs.some(r => isChanged(r, 'b1') || isChanged(r, 'b2') || r.end !== r.oe);
+  return '<div class="sumbar"><p>' + esc(s) + '</p>' +
+    '<button class="btn" data-act="auto-day">Arreglar este día</button>' +
+    '<button class="btn" data-act="auto-week">Arreglar la semana</button>' +
+    '<button class="btn ghost" data-act="reset-day"' + (anyChange ? '' : ' disabled') + '>Restablecer día</button>' + (S.dl === null ? '' : '<button class="btn primary" data-act="dl-xlsx"' + (changeList().length ? '' : ' disabled') + '>Descargar Excel corregido</button>') + '</div>';
+}
+
+function inspectorHTML(){
+  const z = '<div class="zoom"><button class="btn small" data-act="zoom-out" aria-label="Alejar">−</button><span class="muted">Zoom</span><button class="btn small" data-act="zoom-in" aria-label="Acercar">+</button></div>';
+  if (!S.sel) return '<div class="inspector"><span class="muted">Arrastra un break para moverlo, o haz clic en uno para ajustarlo con precisión. Las barras tenues son los turnos.</span>' + z + '</div>';
+  const r = findRec(S.sel.id);
+  if (!r) return '<div class="inspector"><span class="muted">Selecciona un break.</span>' + z + '</div>';
+  const k = S.sel.k, orig = k === 'b1' ? r.o1 : r.o2;
+  return '<div class="inspector"><span class="who2">' + esc(r.name) + '</span><span class="muted">' + (k === 'b1' ? 'Break 1' : 'Break 2') + ', ' + esc(r.queue) + ', turno ' + fmt(r.start) + ' a ' + fmt(r.end) + '</span>' +
+    '<button class="btn small" data-act="nudge" data-d="-30" aria-label="30 minutos antes">−30</button>' +
+    '<input type="time" step="1800" value="' + fmt24(r[k]) + '" data-act="settime" aria-label="Hora del break">' +
+    '<button class="btn small" data-act="nudge" data-d="30" aria-label="30 minutos después">+30</button>' +
+    (isChanged(r, k) ? '<button class="btn small" data-act="revert">Volver a ' + fmt(orig) + '</button>' : '') +
+    '<button class="btn small ghost" data-act="deselect">Soltar</button>' + z + '</div>';
+}
+
+function boardHTML(d, issues){
+  const flagged = new Set();
+  issues.filter(i => (i.type === 'queue' || i.type === 'task') && !S.ignored.has(i.id)).forEach(i => i.items.forEach(x => flagged.add(x.r.id + ':' + x.k)));
+  const byLane = {}; d.recs.forEach(r => { (byLane[laneOf(r)] = byLane[laneOf(r)] || []).push(r); });
+  const order = LANES.concat(['Otros']).filter(l => byLane[l]);
+  const px = m => ((m - S0) / STEP) * S.col;
+  let h = '<div class="boardScroll"><div class="boardInner"><div class="axis"><div class="who">Persona</div><div class="ticks">';
+  for (let m = S0; m < S1; m += 60) h += '<div class="tick" style="left:' + px(m) + 'px">' + fmt(m).replace(':00', '') + '</div>';
+  h += '</div></div>';
+  // cobertura
+  const covQ = ['Phones', 'Chats'].filter(q => byLane[q]);
+  if (covQ.length){
+    const covs = covQ.map(q => coverage(d.recs, q));
+    const maxOn = Math.max(1, ...covs.map(c => Math.max(...c.map(x => x.on))));
+    const unit = Math.max(5, Math.floor(50 / maxOn));
+    h += '<section class="lane" style="--q:var(--ink)"><div class="laneHead"><i></i>Cobertura<small>personas trabajando por media hora (lo tenue es quien está en turno)</small></div>';
+    covQ.forEach((q, qi) => {
+      h += '<div class="covRow" style="--q:' + QCOL[q] + '"><div class="who"><b>' + q + '</b><small>overflow disponible en el tooltip</small></div><div class="covTrack">';
+      covs[qi].forEach(c => {
+        if (!c.on) return;
+        const low = c.on >= 2 && c.work <= CFG.minCover;
+        h += '<div class="bar' + (low ? ' low' : '') + '" style="left:' + px(c.s) + 'px;height:' + (c.on * unit + 4) + 'px" title="' + esc(q + ' ' + fmt(c.s) + ': ' + c.work + ' de ' + c.on + ' trabajando. Overflow: ' + overflowAt(d.recs, c.s) + (c.onBreak.length ? '. En break: ' + c.onBreak.join(', ') : '')) + '"><i style="height:' + Math.max(3, c.work * unit) + 'px">' + (c.work * unit >= 12 ? c.work : '') + '</i></div>';
+      });
+      h += '</div></div>';
+    });
+    h += '</section>';
+  }
+  order.forEach(l => {
+    const rows = byLane[l].slice().sort((a, b) => (a.start - b.start) || a.name.localeCompare(b.name));
+    const collapsible = (l === 'Overflow' || l === 'Otros');
+    const isOpen = !collapsible || S.open[l];
+    const qIssues = issues.filter(i => i.type === 'queue' && i.key === l && !S.ignored.has(i.id));
+    h += '<section class="lane" style="--q:' + QCOL[l] + '"><div class="laneHead"><i></i>' + l + '<small>' + rows.length + ' ' + pl(rows.length, 'persona', 'personas') + '</small>' +
+      (qIssues.length ? '<span class="flag">' + qIssues.length + ' ' + pl(qIssues.length, 'choque', 'choques') + '</span>' : '') +
+      (collapsible ? '<button data-act="toggle-lane" data-l="' + l + '">' + (isOpen ? 'Ocultar' : 'Mostrar') + '</button>' : '') + '</div>';
+    if (isOpen){
+      // franjas de choque
+      qIssues.forEach(i => {
+        const t0 = i.items[0].t, t1 = i.items[i.items.length - 1].t + CFG.dur;
+        h += '<div class="seam" style="left:calc(var(--who) + ' + px(t0) + 'px);width:' + (px(t1) - px(t0)) + 'px"></div>';
+      });
+      rows.forEach(r => {
+        const valid = r.start != null && r.end != null && r.end > r.start;
+        h += '<div class="rowL"><div class="who" title="' + esc(r.name + ', ' + r.area) + '"><b>' + esc(r.name) + '</b><small>' + esc(r.area) + (r.task && r.task.trim() ? ', ' + esc(r.task.split('|')[0].trim()) : '') + '</small></div><div class="track">';
+        if (r.start != null){
+          h += valid ? '<div class="shift" style="left:' + px(r.start) + 'px;width:' + (px(r.end) - px(r.start)) + 'px"></div>' : '<div class="shift invalid" style="left:' + px(r.start) + 'px">¿salida?</div>';
+        }
+        ['b1', 'b2'].forEach(k => {
+          if (r[k] == null) return;
+          const sel = S.sel && S.sel.id === r.id && S.sel.k === k;
+          const cls = 'chip' + (flagged.has(r.id + ':' + k) ? ' bad' : '') + (sel ? ' sel' : '') + (isChanged(r, k) ? ' changed' : '');
+          h += '<div class="' + cls + '" role="button" tabindex="0" data-chip="' + r.id + ':' + k + '" data-rid="' + r.id + '" data-k="' + k + '" style="left:' + (px(r[k]) + 1) + 'px;width:' + (CFG.dur / STEP * S.col - 3) + 'px" aria-label="' + esc(r.name + ', ' + (k === 'b1' ? 'Break 1' : 'Break 2') + ', ' + fmt(r[k])) + '" title="' + esc(r.name + ' ' + kLabel(k) + (isChanged(r, k) ? ' (antes ' + fmt(k === 'b1' ? r.o1 : r.o2) + ')' : '')) + '"><span class="t">' + fmtShort(r[k]) + '</span></div>';
+        });
+        h += '</div></div>';
+      });
+    }
+    h += '</section>';
+  });
+  return h + '</div></div>';
+}
+
+function cardInfo(d, i){
+  const recs = d.recs;
+  if (i.type === 'queue'){
+    const names = i.items.map(x => x.r.name + ' (' + kLabel(x.k) + ')');
+    return { cls:'queue', title: i.key + ' a las ' + fmt(i.time) + ': salen juntos ' + joinNames(names) + '.', text: i.items.length > 2 ? 'Tres o más de la misma cola en break a la vez dejan poca gente atendiendo.' : 'Dos de la misma cola no deberían estar en break al mismo tiempo.' };
+  }
+  if (i.type === 'task'){
+    const m = i.items.filter(x => x.role === 'main'), s = i.items.filter(x => x.role === '2nd');
+    return { cls:'task', title: i.key + ' a las ' + fmt(i.time) + ': ' + joinNames(m.map(x => x.r.name)) + ' (principal) y ' + joinNames(s.map(x => x.r.name)) + ' (2nd) salen juntos.', text:'Mientras uno está en break, el otro debe estar cubriendo esa task.' };
+  }
+  if (i.type === 'cover'){
+    const range = fmt(i.from) + ' a ' + fmt(i.to), ov2 = overflowAt(recs, i.from);
+    if (i.kind === 'thin') return { cls:'cover bad', title: i.key + ' de ' + range + ': queda ' + (i.minWork) + ' de ' + i.on + ' trabajando.', text:'En break: ' + joinNames(i.names) + '. Overflow disponible: ' + ov2 + '.' };
+    if (i.kind === 'empty') return { cls:'cover bad', title: i.key + ' de ' + range + ': no hay nadie en turno.', text:'Overflow disponible: ' + ov2 + '.' };
+    return { cls:'cover warn', title: i.key + ' de ' + range + ': solo hay 1 persona en turno.', text:'No es un choque, pero no hay relevo en esa cola. Overflow disponible: ' + ov2 + '.' };
+  }
+  return { cls:'data', title:i.text, text:i.hint };
+}
+
+function sideHTML(d, issues){
+  const F = [['all', 'Todo'], ['queue', 'Breaks'], ['task', 'Tasks'], ['cover', 'Cobertura'], ['data', 'Datos']];
+  const vis = issues.filter(i => S.showIgnored || !S.ignored.has(i.id));
+  const cnt = k => vis.filter(i => k === 'all' || i.type === k).length;
+  let list = vis.filter(i => S.filter === 'all' || i.type === S.filter);
+  const sev = i => (i.type === 'queue' || i.type === 'task') ? 0 : (i.type === 'cover' && i.kind !== 'solo') ? 1 : i.type === 'cover' ? 2 : 3;
+  list.sort((a, b) => sev(a) - sev(b) || a.time - b.time);
+  const nIgn = issues.filter(i => S.ignored.has(i.id)).length;
+  let cards = '';
+  list.forEach(i => {
+    const c = cardInfo(d, i), ign = S.ignored.has(i.id);
+    let apply = '';
+    if (!ign && (i.type === 'queue' || i.type === 'task' || (i.type === 'cover' && i.kind === 'thin') || (i.type === 'data' && i.key === 'horario'))){
+      const m = suggestFor(d, i);
+      if (m) apply = '<button class="btn small apply" data-act="apply" data-id="' + esc(i.id) + '">Mover ' + esc(first(m.r.name)) + ' ' + kLabel(m.k) + ' a ' + fmt(m.to) + '</button>';
+    }
+    if (i.type === 'data' && i.fix) apply = '<button class="btn small apply" data-act="fixend" data-rid="' + i.fix.rec.id + '" data-to="' + i.fix.to + '">Poner salida ' + fmt(i.fix.to) + '</button>';
+    const target = (i.items && i.items[0]) ? i.items[0].r.id + ':' + i.items[0].k : (i.rec ? i.rec.id : '');
+    cards += '<article class="card ' + c.cls + '" data-cid="' + esc(i.id) + '"><div class="rail"></div><div class="bd"><h3>' + esc(c.title) + '</h3><p>' + esc(c.text) + '</p><div class="acts">' +
+      '<button class="btn small" data-act="view" data-id="' + esc(i.id) + '">Ver en el tablero</button>' + apply +
+      '<button class="btn small ghost" data-act="' + (ign ? 'unignore' : 'ignore') + '" data-id="' + esc(i.id) + '">' + (ign ? 'Volver a avisar' : 'Ignorar') + '</button></div></div></article>';
+  });
+  if (!cards) cards = '<div class="empty"><b>Todo despejado</b>No hay alertas en esta categoría para ' + esc(d.label) + '.</div>';
+  let nfix = 0; S.days.forEach(x => x.recs.forEach(r => { if (r.start != null && r.end != null && r.end <= r.start) nfix++; }));
+  const fixAll = nfix ? '<div class="tiny"><button class="btn small" data-act="fixend-all">Poner salida a 8 h después de la entrada a ' + nfix + ' ' + pl(nfix, 'turno mal escrito', 'turnos mal escritos') + ' de la semana</button></div>' : '';
+  const warn = (S.warn || []).map(w => '<div class="tiny">' + esc(w) + '</div>').join('');
+  return '<aside class="panel side" aria-label="Alertas"><div class="sideHead"><h2>Alertas de ' + esc(d.label) + '</h2><div class="chips">' +
+    F.map(f => '<button class="fchip" data-act="filter" data-f="' + f[0] + '" aria-pressed="' + (S.filter === f[0]) + '">' + f[1] + ' ' + cnt(f[0]) + '</button>').join('') + '</div></div>' +
+    '<div class="cards">' + cards + '</div>' + fixAll +
+    (nIgn ? '<div class="tiny"><button class="btn small ghost" data-act="toggle-ignored">' + (S.showIgnored ? 'Ocultar' : 'Mostrar') + ' ' + nIgn + ' ' + pl(nIgn, 'ignorada', 'ignoradas') + '</button></div>' : '') + warn + '</aside>';
+}
+
+function changeList(){
+  const rows = [];
+  S.days.forEach(d => d.recs.forEach(r => {
+    if (isChanged(r, 'b1')) rows.push({ d, r, what:'Break 1', from:r.o1, to:r.b1, cell:r.a1, k:'b1' });
+    if (isChanged(r, 'b2')) rows.push({ d, r, what:'Break 2', from:r.o2, to:r.b2, cell:r.a2, k:'b2' });
+    if (r.end !== r.oe) rows.push({ d, r, what:'Salida', from:r.oe, to:r.end, cell:r.ae, k:'end' });
+  }));
+  return rows;
+}
+
+function exportHTML(){
+  const ch = changeList(), n = ch.length;
+  const per = S.days.map(d => [d.label, ch.filter(c => c.d === d).length]).filter(x => x[1]);
+  const msg = n ? '<b>' + n + ' ' + pl(n, 'cambio', 'cambios') + '</b> ' + esc(per.map(p => p[0] + ' ' + p[1]).join(', ')) : 'Sin cambios todavía. Lo que muevas aquí no toca tu archivo hasta que lo descargues.';
+  return '<div class="exportBar"><div class="msg">' + msg + '</div>' +
+    '<button class="btn" data-act="undo"' + (S.undo.length ? '' : ' disabled') + '>Deshacer</button>' +
+    '<button class="btn" data-act="show-changes"' + (n ? '' : ' disabled') + '>Ver cambios</button>' +
+    (S.dl === null ? '<span style="font-size:13px;color:var(--bad)">Este visor no permite descargar archivos; abre la página en claude.ai para bajar el Excel.</span>' : '<button class="btn" data-act="dl-csv"' + (n ? '' : ' disabled') + '>Lista de cambios (.csv)</button><button class="btn primary" data-act="dl-xlsx"' + (n ? '' : ' disabled') + '>Descargar Excel corregido</button>') + '</div>';
+}
+
+/* ---------- portada ---------- */
+function renderLanding(){
+  $('#tools').hidden = true;
+  app.innerHTML = '<div class="landing"><div><h2>Sube la semana y separa los breaks que se pisan.</h2>' +
+    '<p class="lead">Lee tu Excel de Tasks (una hoja por día), marca los choques de break y de task y los huecos de cobertura, y te deja arreglarlos arrastrando. Al final descargas el mismo Excel con las horas corregidas.</p>' +
+    '<div class="drop" id="drop"><div><strong>Arrastra aquí el archivo .xlsx</strong><span>Hojas tipo “Monday 16”, “Tuesday 17”…</span></div><button class="btn primary" id="pick" type="button">Elegir archivo</button></div>' +
+    '<div class="err" id="err" role="alert"></div><p class="privacy">El archivo se lee en tu navegador; no se envía a ningún servidor.</p></div>' +
+    '<div class="demo" aria-label="Ejemplo"><h3>Así se ve un choque y su arreglo</h3><div class="demoLane clash" id="dl"><div class="dSeam"></div>' +
+    '<div class="dRow r1"><div class="dChip" style="left:50%">6:30pm</div></div><div class="dRow r2"><div class="dChip" id="dc2" style="left:50%">6:30pm</div></div></div>' +
+    '<div class="dTimes"><span>5:30 pm</span><span>6:00 pm</span><span>6:30 pm</span><span>7:00 pm</span></div>' +
+    '<p id="dmsg">Dos de Phones salen a las 6:30 pm. Con el Excel cargado, cada choque trae una sugerencia como esta.</p><button class="btn apply" id="dbtn" type="button">Mover a las 6:00 pm</button></div></div>';
+  const drop = $('#drop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  $('#pick').addEventListener('click', () => $('#file').click());
+  let solved = false;
+  $('#dbtn').addEventListener('click', () => {
+    solved = !solved;
+    $('#dl').classList.toggle('clash', !solved);
+    $('#dc2').style.left = solved ? '25%' : '50%';
+    $('#dc2').textContent = solved ? '6:00pm' : '6:30pm';
+    $('#dbtn').textContent = solved ? 'Volver a ponerlo igual' : 'Mover a las 6:00 pm';
+    $('#dmsg').textContent = solved ? 'Sin choque: uno sale a las 6:00 pm y el otro a las 6:30 pm.' : 'Dos de Phones salen a las 6:30 pm. Con el Excel cargado, cada choque trae una sugerencia como esta.';
+  });
+}
+
+/* ---------- descargas ---------- */
+function stamp(n){ return n.replace(/\.xlsx$/i, ''); }
+async function dlXlsx(){
+  if (!S.dl) return;
+  const edits = collectEdits(S.days);
+  if (!edits.length) return;
+  try{
+    const out = await patchXlsx(S.buf, edits);
+    await S.dl.save({ filename: stamp(S.name) + ' corregido.xlsx', data: out.data });
+    toast('Excel corregido listo con ' + edits.length + ' ' + pl(edits.length, 'celda cambiada', 'celdas cambiadas') + '.');
+  }catch(e){
+    if (e && e.code === 'declined') return;
+    toast(e && e.message ? e.message : 'No pude generar el Excel.');
+  }
+}
+async function dlCsv(){
+  if (!S.dl) return;
+  const rows = [['Día', 'Persona', 'Área', 'Cola', 'Qué', 'Antes', 'Ahora', 'Celda']];
+  changeList().forEach(c => rows.push([c.d.sheetName, c.r.name, c.r.area, c.r.queue, c.what, fmt(c.from), fmt(c.to), c.cell]));
+  const csv = '\ufeff' + rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  try{ await S.dl.save({ filename: stamp(S.name) + ' cambios.csv', data: csv }); }
+  catch(e){ if (!(e && e.code === 'declined')) toast('No pude generar la lista.'); }
+}
+function showChanges(){
+  const ch = changeList();
+  $('#dlgBody').innerHTML = '<table><thead><tr><th>Día</th><th>Persona</th><th>Qué</th><th>Antes</th><th></th><th>Ahora</th><th>Celda</th><th></th></tr></thead><tbody>' +
+    ch.map((c, i) => '<tr><td>' + esc(c.d.label) + '</td><td>' + esc(c.r.name) + '</td><td>' + c.what + '</td><td>' + fmt(c.from) + '</td><td class="arrow">a</td><td><b>' + fmt(c.to) + '</b></td><td>' + c.cell + '</td><td><button class="btn small" data-act="revert-row" data-i="' + i + '">Deshacer</button></td></tr>').join('') + '</tbody></table>';
+  $('#dlg').showModal();
+}
+
+/* ---------- eventos ---------- */
+app.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const a = t.dataset.act, d = S.days.length ? day() : null;
+  if (a === 'tab'){ S.di = +t.dataset.i; S.sel = null; render(); }
+  else if (a === 'filter'){ S.filter = t.dataset.f; render(); }
+  else if (a === 'toggle-lane'){ S.open[t.dataset.l] = !S.open[t.dataset.l]; render(); }
+  else if (a === 'toggle-ignored'){ S.showIgnored = !S.showIgnored; render(); }
+  else if (a === 'ignore'){ S.ignored.add(t.dataset.id); render(); }
+  else if (a === 'unignore'){ S.ignored.delete(t.dataset.id); render(); }
+  else if (a === 'zoom-in'){ S.col = Math.min(88, S.col + 8); render(); }
+  else if (a === 'zoom-out'){ S.col = Math.max(56, S.col - 8); render(); }
+  else if (a === 'deselect'){ S.sel = null; render(); }
+  else if (a === 'undo'){ undoLast(); }
+  else if (a === 'auto-day'){ runAuto([d]); }
+  else if (a === 'auto-week'){ runAuto(S.days); }
+  else if (a === 'reset-day'){
+    const mv = []; d.recs.forEach(r => { ['b1', 'b2'].forEach(k => { const o = k === 'b1' ? r.o1 : r.o2; if (r[k] !== o){ mv.push({ rec:r, k, from:r[k] }); r[k] = o; } }); if (r.end !== r.oe){ mv.push({ rec:r, k:'end', from:r.end }); r.end = r.oe; } });
+    if (mv.length) S.undo.push({ moves:mv });
+    S.sel = null; render(); toastMsg('Dejé ' + d.label + ' como venía en el archivo.', mv.length > 0);
+  }
+  else if (a === 'apply'){ const i = buildIssues(d).find(x => x.id === t.dataset.id); if (i) applySuggestion(d, i); }
+  else if (a === 'fixend-all'){
+    const mv = []; S.days.forEach(x => x.recs.forEach(r => { if (r.start != null && r.end != null && r.end <= r.start){ mv.push({ rec:r, k:'end', from:r.end }); r.end = r.start + 480; } }));
+    if (mv.length){ S.undo.push({ moves:mv }); render(); toastMsg('Corregí ' + mv.length + ' ' + pl(mv.length, 'salida', 'salidas') + ' a 8 h después de la entrada. Ahora el arreglo automático puede mover sus breaks.', true); }
+  }
+  else if (a === 'fixend'){ applyEndFix(findRec(t.dataset.rid), +t.dataset.to); }
+  else if (a === 'view'){
+    const i = buildIssues(d).find(x => x.id === t.dataset.id); if (!i) return;
+    if (i.items && i.items[0]){ const r = i.items[0].r; if (!LANES.includes(r.queue) || r.queue === 'Overflow') S.open[laneOf(r)] = true; S.sel = { id:r.id, k:i.items[0].k }; pendingFocus = r.id + ':' + i.items[0].k; }
+    else if (i.rec){ S.open[laneOf(i.rec)] = true; S.sel = null; pendingFocus = null; }
+    render();
+    if (i.type === 'cover'){ const sc = document.querySelector('.boardScroll'); if (sc) sc.scrollTo({ left: Math.max(0, ((i.from - S0) / STEP) * S.col - 120), behavior:'smooth' }); }
+    if (i.rec){ const sc = document.querySelector('.boardScroll'); if (sc) sc.scrollTo({ left: Math.max(0, ((i.rec.start - S0) / STEP) * S.col - 120), behavior:'smooth' }); }
+  }
+  else if (a === 'nudge'){
+    const r = findRec(S.sel.id); setBreak(r, S.sel.k, r[S.sel.k] + +t.dataset.d);
+  }
+  else if (a === 'revert'){ const r = findRec(S.sel.id); setBreak(r, S.sel.k, S.sel.k === 'b1' ? r.o1 : r.o2); }
+  else if (a === 'show-changes'){ showChanges(); }
+  else if (a === 'dl-xlsx'){ dlXlsx(); }
+  else if (a === 'dl-csv'){ dlCsv(); }
+});
+app.addEventListener('change', e => {
+  const t = e.target.closest('[data-act="settime"]'); if (!t || !S.sel || !t.value) return;
+  const [h, m] = t.value.split(':').map(Number); const r = findRec(S.sel.id);
+  setBreak(r, S.sel.k, h * 60 + m);
+});
+$('#dlgBody').addEventListener('click', e => {
+  const t = e.target.closest('[data-act="revert-row"]'); if (!t) return;
+  const c = changeList()[+t.dataset.i]; if (!c) return;
+  if (c.k === 'end') c.r.end = c.r.oe; else c.r[c.k] = c.from;
+  render(); const ch = changeList();
+  if (ch.length) showChanges(); else $('#dlg').close();
+});
+$('#dlgClose').addEventListener('click', () => $('#dlg').close());
+
+/* arrastrar */
+app.addEventListener('pointerdown', e => {
+  const chip = e.target.closest('.chip'); if (!chip || e.button > 0) return;
+  const rec = findRec(chip.dataset.rid);
+  drag = { chip, rec, k:chip.dataset.k, x0:e.clientX, steps:0 };
+  chip.setPointerCapture(e.pointerId); chip.classList.add('drag');
+});
+app.addEventListener('pointermove', e => {
+  if (!drag) return;
+  drag.steps = Math.round((e.clientX - drag.x0) / S.col);
+  drag.chip.style.transform = 'translateX(' + (drag.steps * S.col) + 'px)';
+  drag.chip.querySelector('.t').textContent = fmtShort(drag.rec[drag.k] + drag.steps * STEP);
+});
+function endDrag(e){
+  if (!drag) return;
+  const { rec, k, steps, chip } = drag; drag = null;
+  chip.classList.remove('drag'); chip.style.transform = '';
+  if (!steps){ S.sel = { id:rec.id, k }; render(); return; }
+  let nt = rec[k] + steps * STEP;
+  if (rec.start != null && rec.end > rec.start) nt = Math.max(rec.start, Math.min(rec.end - CFG.dur, nt));
+  if (nt === rec[k]){ render(); return; }
+  pendingFocus = rec.id + ':' + k;
+  setBreak(rec, k, nt);
+}
+app.addEventListener('pointerup', endDrag);
+app.addEventListener('pointercancel', e => { if (drag){ drag.chip.classList.remove('drag'); drag.chip.style.transform = ''; drag = null; render(); } });
+app.addEventListener('keydown', e => {
+  const chip = e.target.closest('.chip'); if (!chip) return;
+  const rec = findRec(chip.dataset.rid), k = chip.dataset.k;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+    e.preventDefault(); pendingFocus = rec.id + ':' + k;
+    setBreak(rec, k, rec[k] + (e.key === 'ArrowLeft' ? -STEP : STEP));
+    const el = document.querySelector('[data-chip="' + rec.id + ':' + k + '"]'); if (el) el.focus();
+  } else if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); S.sel = { id:rec.id, k }; render(); const el = document.querySelector('[data-chip="' + rec.id + ':' + k + '"]'); if (el) el.focus(); }
+});
+
+/* controles superiores */
+$('#dur').addEventListener('change', e => { CFG.dur = +e.target.value; render(); });
+$('#minc').addEventListener('change', e => { CFG.minCover = +e.target.value; render(); });
+$('#newFile').addEventListener('click', () => $('#file').click());
+$('#file').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadFile(f); });
+
+/* descargas disponibles */
+(async () => {
+  try{ S.dl = (window.claude && claude.use) ? await claude.use('downloads') : null; }catch(_){ S.dl = null; }
+  if (S.days.length) render();
+})();
+renderLanding();
+})();
+</script>
+</body>
+</html>
