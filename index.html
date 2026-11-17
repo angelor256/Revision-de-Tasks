@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
 :root{
   --bg:#EAEEF4; --panel:#FFFFFF; --panel2:#F4F6FA; --ink:#101B33; --muted:#566280; --line:#D4DAE6; --grid:#E3E8F0;
@@ -178,6 +180,170 @@ table{border-collapse:collapse;width:100%;font-size:13.5px}
 th{text-align:left;font-weight:600;color:var(--muted);padding:8px 6px;border-bottom:1px solid var(--line)}
 td{padding:7px 6px;border-bottom:1px solid var(--grid)}
 .arrow{color:var(--muted)}
+.nav{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px}
+.nav button{border:0;background:transparent;border-radius:999px;padding:7px 15px;font-weight:600;font-size:13.5px;color:var(--muted);transition:background .2s,color .2s}
+.nav button[aria-current="page"]{background:var(--ink);color:var(--bg)}
+body.page-briefing{background:radial-gradient(1000px 520px at 4% -8%,color-mix(in srgb,var(--phones) 17%,transparent),transparent 62%),radial-gradient(900px 520px at 104% 2%,color-mix(in srgb,var(--casino) 15%,transparent),transparent 58%),radial-gradient(760px 520px at 62% 112%,color-mix(in srgb,var(--chats) 13%,transparent),transparent 60%),var(--bg);background-attachment:fixed}
+.bw{max-width:1180px;margin:0 auto;padding:6px clamp(14px,3vw,32px) 120px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;align-items:start}
+.rail{position:sticky;top:14px;display:flex;flex-direction:column;gap:6px}
+.rs{position:relative;display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:14px;border:0;background:transparent;text-align:left;font-weight:500;color:var(--muted);transition:background .2s,transform .2s}
+.rs:not(:last-child)::after{content:"";position:absolute;left:25px;top:36px;height:14px;border-left:2px solid var(--line)}
+.rs.done:not(:last-child)::after{border-color:var(--ok)}
+.rs i{flex:none;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font:700 12.5px var(--body);font-style:normal;background:var(--panel);z-index:1}
+.rs[aria-current="step"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+.rs[aria-current="step"] i{background:linear-gradient(135deg,var(--phones),var(--casino));color:#fff;border-color:transparent}
+.rs.done i{background:var(--ok);border-color:var(--ok);color:#fff}
+.rs[disabled]{opacity:.45;cursor:not-allowed}
+.rs:not([disabled]):not([aria-current="step"]):hover{background:color-mix(in srgb,var(--panel) 70%,transparent)}
+.bmain{min-width:0}
+.bstep,.bres{position:relative;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:26px;padding:clamp(20px,3.4vw,40px);box-shadow:var(--shadow)}
+.bstep{overflow:hidden}
+.bstep>*{position:relative;z-index:1}
+.bstep::before{content:attr(data-n);position:absolute;right:22px;bottom:-30px;font:800 160px/1 var(--display);color:var(--ink);opacity:.05;z-index:0;pointer-events:none}
+.bstep h2,.bres h2{font-size:clamp(26px,3.6vw,42px);line-height:1.04;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+.bstep h2,.bstep .bhint{max-width:min(100%,520px)}
+.bhint{color:var(--muted);margin:0 0 22px;max-width:60ch}
+.bhint.tight{margin:8px 0 0;font-size:13.5px}
+.deco{position:absolute!important;right:-14px;top:16px;width:230px;height:150px;pointer-events:none;z-index:0!important}
+.deco i{position:absolute;display:flex;align-items:center;justify-content:center;width:96px;height:34px;border-radius:11px;background:var(--q);color:var(--chipInk);font:600 13px var(--body);font-style:normal;box-shadow:0 8px 18px -8px rgba(0,0,0,.5)}
+.deco i:nth-child(1){left:22px;top:6px;transform:rotate(-8deg)}
+.deco i:nth-child(2){left:76px;top:52px;transform:rotate(5deg)}
+.deco i:nth-child(3){left:34px;top:98px;transform:rotate(-3deg)}
+@media (prefers-reduced-motion:no-preference){
+  .deco i{animation:floaty 6s ease-in-out infinite}
+  .deco i:nth-child(2){animation-delay:-2s}.deco i:nth-child(3){animation-delay:-4s}
+  .bstep,.bhero{animation:rise .45s both}
+  .bsess{animation:rise .5s both;animation-delay:calc(var(--i,0)*70ms)}
+}
+@keyframes floaty{50%{translate:0 -7px}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.binput{width:100%;font-size:20px;padding:14px 16px;border-radius:16px;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);transition:border-color .2s,box-shadow .2s}
+.binput:focus{border-color:var(--phones);box-shadow:0 0 0 4px color-mix(in srgb,var(--phones) 18%,transparent);outline:none}
+.binput.small{font-size:16px;padding:9px 12px;width:auto;min-width:0}
+.binput.num{width:84px}
+.bfield{margin:0 0 20px}
+.bgrid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 20px}
+.bfield>label{display:block;font-weight:600;margin-bottom:8px}
+.bchips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bchip{border:1.5px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 16px;font-weight:600;font-size:14.5px;transition:transform .15s,background .15s,border-color .15s}
+.bchip:hover{transform:translateY(-1px);border-color:var(--phones)}
+.bchip[aria-pressed="true"]{background:linear-gradient(135deg,var(--ink),color-mix(in srgb,var(--ink) 80%,var(--phones)));color:var(--bg);border-color:transparent;box-shadow:0 6px 14px -8px var(--ink)}
+.bother{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:14px}
+.bcustom{display:flex;gap:8px;margin-top:16px;max-width:420px}
+.bprev{background:var(--panel2);border-left:4px solid var(--phones);border-radius:12px;padding:12px 14px;margin:6px 0 0;color:var(--muted);font-size:14.5px}
+.bnav{display:flex;gap:10px;align-items:center;margin-top:28px;flex-wrap:wrap}
+.bnav .bcount{margin-left:auto;color:var(--muted);font-size:14px}
+.bnav .btn.primary{margin-left:auto;padding:11px 20px;font-size:14.5px}
+.bnav .bcount + .btn.primary{margin-left:0}
+.plist{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.pgroup{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel)}
+.phead{display:flex;align-items:center;justify-content:space-between;background:var(--panel2);padding:8px 12px}
+.phead h3{font-size:15px}
+.prow{display:grid;grid-template-columns:20px 34px minmax(130px,1.2fr) auto minmax(0,2fr) auto;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--grid);cursor:pointer;font-size:14px;transition:background .15s}
+.prow:hover{background:var(--panel2)}
+.prow input{width:18px;height:18px}
+.pname{font-weight:600}
+.av{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--q) 20%,var(--panel));border:2px solid var(--q);font:700 12px var(--body);color:var(--ink)}
+.pq{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600;color:var(--q);background:color-mix(in srgb,var(--q) 14%,transparent);border:1px solid color-mix(in srgb,var(--q) 40%,transparent);white-space:nowrap}
+.ptask{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdays{color:var(--muted);font-size:12.5px;white-space:nowrap}
+/* resultado */
+.bres{padding:clamp(14px,2.4vw,26px)}
+.bhero{position:relative;overflow:hidden;border-radius:20px;padding:clamp(18px,3vw,32px);background:linear-gradient(135deg,color-mix(in srgb,var(--phones) 22%,var(--panel)),color-mix(in srgb,var(--casino) 16%,var(--panel)));border:1px solid color-mix(in srgb,var(--phones) 28%,var(--line))}
+.bhero::before,.bhero::after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+.bhero::before{width:240px;height:240px;right:-70px;top:-90px;background:color-mix(in srgb,var(--casino) 22%,transparent)}
+.bhero::after{width:160px;height:160px;right:90px;bottom:-90px;background:color-mix(in srgb,var(--chats) 22%,transparent)}
+.bhero>*{position:relative;z-index:1}
+.bhtop{display:flex;gap:14px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.bsub{margin:0;color:var(--muted)}
+.bbadge{border-radius:999px;padding:6px 15px;font-weight:700;font-size:13px;white-space:nowrap}
+.bbadge.wait{background:var(--warnSoft);color:var(--warn)}
+.bbadge.ok{background:var(--okSoft);color:var(--ok)}
+.bmeter{height:12px;border-radius:7px;margin:18px 0 6px;overflow:hidden;background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--bad) 38%,transparent) 0 6px,color-mix(in srgb,var(--bad) 18%,transparent) 6px 12px)}
+.bmeter i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,var(--chats),var(--phones));transition:width .6s cubic-bezier(.3,.8,.3,1)}
+.bsum{font-family:var(--display);font-size:clamp(18px,2.2vw,24px);font-weight:600;margin:10px 0 6px;max-width:60ch}
+.bflags{display:flex;gap:6px;flex-wrap:wrap}
+.bday{margin-top:24px}
+.bday h3{display:flex;align-items:center;gap:10px;font-size:19px;margin-bottom:10px}
+.bday h3 i{width:12px;height:12px;border-radius:4px;background:var(--dc);transform:rotate(45deg)}
+.bsess{display:grid;grid-template-columns:136px minmax(0,1fr);border:1px solid var(--line);border-radius:18px;background:var(--panel);margin-bottom:12px;overflow:hidden;box-shadow:0 10px 24px -18px rgba(0,0,0,.45)}
+.stime{position:relative;background:linear-gradient(165deg,var(--dc),color-mix(in srgb,var(--dc) 84%,#fff));color:var(--chipInk);padding:16px 16px 14px;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.stime b{font:800 24px/1.05 var(--display);letter-spacing:-.01em}
+.stime span{font-size:13.5px;opacity:.92}
+.stime em{font-style:normal;font-size:12px;font-weight:600;margin-top:8px;align-self:flex-start;border-radius:999px;padding:2px 9px;background:color-mix(in srgb,var(--chipInk) 22%,transparent)}
+.stime::after{content:"";position:absolute;right:-1px;top:10px;bottom:10px;border-right:2px dashed color-mix(in srgb,var(--panel) 75%,transparent)}
+.sbody{padding:14px 16px;min-width:0}
+.smini{position:relative;height:6px;border-radius:3px;background:var(--grid);margin:0 0 12px}
+.smini i{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--dc);box-shadow:0 0 0 3px color-mix(in srgb,var(--dc) 25%,transparent)}
+.sbadges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.sbadge{font-size:12px;font-weight:600;border-radius:999px;padding:3px 11px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.sbadge.bad{background:var(--badSoft);color:var(--bad);border-color:transparent}
+.sbadge.warn{background:var(--warnSoft);color:var(--warn);border-color:transparent}
+.satt{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.satt li{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:2px 12px;align-items:center}
+.sinfo{display:flex;flex-direction:column;min-width:0}
+.sn{font-weight:700;font-size:15px}
+.sm{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw{grid-column:2 / 4;font-size:12.5px;color:var(--warn)}
+.sw.bad{color:var(--bad);font-weight:600}
+.sempty{display:block!important;color:var(--muted);font-size:14px}
+.sctl{grid-column:2 / 4;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sadd{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bsel{font-size:13.5px;padding:6px 9px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);max-width:100%}
+.bnew{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:18px;padding:12px 14px;border:1.5px dashed var(--line);border-radius:14px}
+.bun,.brecs{margin-top:22px;border-radius:16px;padding:16px 18px}
+.bun{background:var(--badSoft)}
+.bun.warnbox{background:var(--warnSoft)}
+.brecs{background:var(--panel2);border:1px solid var(--line)}
+.bun h3,.brecs h3{font-size:16px;margin-bottom:10px}
+.bun ul,.brecs ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:14px}
+.bun li{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.brecs li{display:flex;gap:10px;align-items:flex-start}
+.brecs .rd{flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--info)}
+.brecs li.warn .rd{background:var(--warn)}.brecs li.ok .rd{background:var(--ok)}
+.exportBar .btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+@media (max-width:860px){
+  .bw{grid-template-columns:1fr}
+  .rail{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .rs{flex:none;padding:8px 10px}
+  .rs:not(:last-child)::after{display:none}
+  .deco{display:none}
+  .prow{grid-template-columns:20px 34px minmax(0,1fr) auto;row-gap:2px}
+  .ptask,.pdays{grid-column:3 / 5}
+  .bsess{grid-template-columns:1fr}
+  .stime{flex-direction:row;align-items:baseline;gap:10px;padding:12px 16px}
+  .stime em{margin:0 0 0 auto}
+  .stime::after{display:none}
+}
+
+.dstrip{position:relative;height:24px;border-radius:9px;margin:0 0 12px;border:1px solid var(--line);overflow:hidden;background:linear-gradient(90deg,color-mix(in srgb,var(--tickets) 16%,var(--panel2)) 0 41.2%,color-mix(in srgb,var(--phones) 14%,var(--panel2)) 41.2% 100%)}
+.dstrip span{position:absolute;top:4px;font-size:11px;font-weight:600;color:var(--muted)}
+.dstrip .dsm{left:9px}.dstrip .dst{left:calc(41.2% + 9px)}
+.dstrip i{position:absolute;top:3px;bottom:3px;border-radius:6px;background:var(--dc);box-shadow:0 2px 6px -2px rgba(0,0,0,.45)}
+
+.pimport{border:1.5px dashed var(--line);border-radius:16px;padding:14px 16px;margin:0 0 18px;background:var(--panel2);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.pimport .bpaste{width:100%;font:inherit;resize:vertical}
+.bimsg{margin:0;font-size:13.5px;color:var(--info);font-weight:600}
+.bfalta{margin-top:26px;border:1.5px solid color-mix(in srgb,var(--bad) 35%,transparent)}
+.bfalta li{align-items:flex-start}
+.bfalta .sm{white-space:normal}
+.bfoot{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.bokbox{background:var(--okSoft);margin-top:26px}
+.bokbox h3{color:var(--ok)}
+.bokbox p{margin:0;color:var(--muted)}
+
+.chk{border-top:1px solid var(--line);padding:12px 14px 16px}
+.chk summary{cursor:pointer;font-family:var(--display);font-weight:700;font-size:16px;margin-bottom:10px}
+.chkGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.chkCard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.chkCard h3{font-size:14px;margin-bottom:6px}
+.chkCard ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ck{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.3}
+.ckd{flex:none;width:9px;height:9px;border-radius:50%;margin-top:4px;background:var(--ok)}
+.ck.bad .ckd{background:var(--bad)}.ck.soft .ckd{background:var(--warn)}
+.ckg{flex:1;min-width:0}
+.ckw{flex:none;color:var(--muted);text-align:right;max-width:46%}
+.ck.bad .ckw{color:var(--bad);font-weight:600}
 
 @media (max-width:980px){
   .landing{grid-template-columns:1fr}
@@ -194,6 +360,7 @@ td{padding:7px 6px;border-bottom:1px solid var(--grid)}
     <svg width="34" height="26" viewBox="0 0 34 26" aria-hidden="true"><rect x="1" y="2" width="18" height="9" rx="4" fill="#2F5BEA"/><rect x="13" y="15" width="18" height="9" rx="4" fill="#D3263A"/></svg>
     <h1>Revisor de breaks</h1>
   </div>
+  <nav class="nav" id="nav" aria-label="Secciones"><button data-nav="breaks" aria-current="page">Revisor de breaks</button><button data-nav="briefing" aria-current="false">Briefing creator</button></nav>
   <div class="tools" id="tools" hidden>
     <label>Duración del break
       <select id="dur"><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option></select>
@@ -211,6 +378,8 @@ td{padding:7px 6px;border-bottom:1px solid var(--grid)}
   <div class="dlgHead"><h2 id="dlgTitle">Cambios hechos</h2><button class="btn small" id="dlgClose">Cerrar</button></div>
   <div class="dlgBody" id="dlgBody"></div>
 </dialog>
+<input type="file" id="bfile" accept=".xlsx" hidden>
+<input type="file" id="bprev" accept=".xlsx" hidden>
 <input type="file" id="file" accept=".xlsx" hidden>
 
 <script>
@@ -220,6 +389,7 @@ const QCHK = ['Phones', 'Chats', 'Tickets', 'Casino'];
 const LANES = ['Phones', 'Chats', 'Tickets', 'Casino', 'Overflow'];
 const PRI = { 'Vip': 0, 'Senior': 1, 'Tier 3': 2, 'Third Party': 2, 'Tier 2': 3, 'Tier 1': 4, 'New Hire': 6 };
 const IGN = new Set(['Crypto']);
+const AREA_UNIQUE = ['Processing', 'Decline', 'Third Party'];
 const CFG = { dur: 30, minCover: 1 };
 const S0 = 360, S1 = 1380, STEP = 30;
 const OFFS = [30, -30, 60, -60, 90, -90, 120, -120, 150, -150];
@@ -292,7 +462,9 @@ function parseWorkbook(wb) {
           start: toMin(get(b.s, r)), end: toMin(get(b.e, r)),
           b1, b2, o1: b1, o2: b2,
           a1: colL(b.b1) + r, a2: colL(b.b2) + r,
-          ae: colL(b.e) + r, oe: toMin(get(b.e, r))
+          ae: colL(b.e) + r, oe: toMin(get(b.e, r)),
+          at: colL(b.task) + r, aq: colL(b.q) + r,
+          ot: (get(b.task, r) ? String(get(b.task, r).v) : ''), oq: (get(b.q, r) ? String(get(b.q, r).v).trim() : '')
         });
       }
     }
@@ -313,6 +485,15 @@ function conflictPairs(recs) {
     for (const r of recs) if (r.queue === q) L.push(...breaksOf(r));
     for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++)
       if (L[i].r !== L[j].r && ov(L[i].t, L[j].t)) pairs.push({ type: 'queue', key: q, a: L[i], b: L[j] });
+  }
+  for (const ar of AREA_UNIQUE) {
+    const L = [];
+    for (const r of recs) if (r.area === ar) L.push(...breaksOf(r));
+    for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {
+      if (L[i].r === L[j].r || !ov(L[i].t, L[j].t)) continue;
+      if (L[i].r.queue === L[j].r.queue && QCHK.includes(L[i].r.queue)) continue;
+      pairs.push({ type: 'area', key: ar, a: L[i], b: L[j] });
+    }
   }
   const groups = new Map();
   const add = (key, base, role, r) => {
@@ -355,7 +536,7 @@ function thinCount(recs) {
   return n;
 }
 
-function buildIssues(day) {
+function buildIssues(day, skipTasks) {
   const recs = day.recs, issues = [];
   const pairs = conflictPairs(recs);
   const byKey = new Map();
@@ -419,6 +600,7 @@ function buildIssues(day) {
       if (why.length) issues.push({ type: 'data', key: 'horario', time: r.b1, rec: r, text: r.name + ': ' + why.join('; '), hint: 'Turno ' + fmt(r.start) + '–' + fmt(r.end) + ', breaks ' + fmt(r.b1) + ' y ' + fmt(r.b2) + '.', id: 'data|horario|' + r.id + r.b1 + r.b2 });
     }
   }
+  if (!skipTasks) taskIssues(day).forEach(i => issues.push(i));
   issues.sort((a, b) => a.time - b.time);
   return issues;
 }
@@ -456,7 +638,7 @@ function bestMove(day, cands) {
 }
 
 function candidatesFor(day, issue) {
-  if (issue.type === 'queue' || issue.type === 'task') return issue.items.map(i => ({ r: i.r, k: i.k }));
+  if (issue.type === 'queue' || issue.type === 'task' || issue.type === 'area') return issue.items.map(i => ({ r: i.r, k: i.k }));
   if (issue.type === 'cover' && issue.kind === 'thin') {
     const c = [];
     for (const r of day.recs) if (r.queue === issue.key) for (const k of ['b1', 'b2'])
@@ -494,7 +676,7 @@ function suggestFor(day, issue) {
 function autoFix(day) {
   const moves = [];
   for (let n = 0; n < 120; n++) {
-    const issues = buildIssues(day).filter(i => i.type === 'queue' || i.type === 'task' || (i.type === 'cover' && i.kind === 'thin'));
+    const issues = buildIssues(day, true).filter(i => i.type === 'queue' || i.type === 'task' || i.type === 'area' || (i.type === 'cover' && i.kind === 'thin'));
     let done = false;
     for (const is of issues) {
       const m = suggestFor(day, is);
@@ -505,9 +687,808 @@ function autoFix(day) {
   return moves;
 }
 
+/* ===== TASKS: revisión de asignación con la lógica del macro Task Maker ===== */
+const MORNING_CUT = 780; // entrada antes de la 1:00 pm = mañana (igual que el macro)
+const T_PROC = {
+  AM5_MT: ['Slack | Balances | Pending | Crypto', 'Emails | Zelle | Crypto', 'NSU | 2nd Zelle | Crypto', 'Banking | 2nd Emails | 2nd Slack | Crypto', 'Monitoring | Audit | Crypto'],
+  AM4_MT: ['Slack | Balances | Pending | Audit | Crypto', 'Emails | Zelle | Crypto', 'NSU | 2nd Slack | 2nd Emails | 2nd Zelle | Crypto', 'Monitoring | Banking | Crypto'],
+  AM5_FS: ['Slack | Balances | Pending | Crypto', 'Emails | Zelle | Crypto', 'NSU | 2nd Zelle | Crypto', 'Pre - Reviews | 2nd Emails | 2nd Slack | Crypto', 'Monitoring | Audit | Crypto'],
+  AM4_FS: ['Slack | Balances | Pending | Audit | Crypto', 'Emails | Zelle | Crypto', 'NSU | 2nd Slack | 2nd Emails | 2nd Zelle | Crypto', 'Monitoring | Pre - Reviews | Crypto'],
+  PM4: ['Slack | Balances | Pending | Crypto', 'Emails | Zelle | Crypto', 'NSU | Monitoring | Audit | Crypto', '2nd Emails | 2nd Slack | 2nd Zelle | Crypto'],
+  PM3: ['Slack | 2nd Emails | Balances | Pending | Crypto', 'Emails | Zelle | 2nd Slack | Crypto', 'NSU | Monitoring | Audit | 2nd Zelle | Crypto']
+};
+const T_DECLINE2 = 'FTDs | Processors | Scrubbers | Velocity';
+const T_DECLINE3 = ['FTDs | Processors | Velocity', 'Scrubbers | Monitoring | Slack', 'FTDs | Processors | Velocity'];
+const T_CASINO1 = 'Slack | Reports | Notion | Payout Tracker | 3rd Party Tickets';
+const T_CASINO_A = 'Slack | Reports | Notion';
+const T_CASINO_B_MT = '2nd Casino | Payout Tracker | 3rd Party Tickets';
+const T_CASINO_B_FS = 'Payout Tracker | 3rd Party Tickets';
+const T_VIP1 = 'Vip Emails | Vip Payouts Tracking';
+const T_VIP_P = 'Vip Emails';
+const T_VIP_B = '2nd Vip Emails | Vip Payouts Tracking';
+const T_ST = ['Emails', '2nd Emails', 'Bonuses', '2nd Tickets | 2nd Bonuses', '3rd Tickets | 3rd Bonuses'];
+const T_TRAIN_AD = 'Copilot | Quality Module';
+const TRAINERS = ['kendra temple', 'natalia sibaja', 'victor ramirez'];
+
+const nt = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+function splitTask(r) {
+  const main = [], note = [];
+  String(r.task || '').split('|').map(s => s.trim()).filter(Boolean).forEach(p => {
+    if (/\d{1,2}(:\d{2})?\s*(AM|PM)/i.test(p) || /^training/i.test(p) || /^coaching with/i.test(p)) note.push(p); else main.push(p);
+  });
+  return { main, note };
+}
+const mainSet = r => new Set(splitTask(r).main.map(nt));
+const groupToks = g => g.split('|').map(s => nt(s));
+const holds = (r, g) => { const s = mainSet(r); return groupToks(g).every(t => s.has(t)); };
+const mainText = r => splitTask(r).main.join(' | ');
+const withTask = (r, text) => [text].concat(splitTask(r).note).filter(Boolean).join(' | ');
+const isAM = r => r.start != null && r.start < MORNING_CUT;
+const validShift = r => r.start != null && r.end != null && r.end > r.start;
+const shiftName = am => am ? 'mañana' : 'tarde';
+
+function pairedGroups(a, b) {
+  const has = (g, name) => groupToks(g).includes(nt(name));
+  for (const t of a.split('|').map(s => s.trim())) if (/^2nd /i.test(t) && has(b, t.slice(4))) return true;
+  for (const t of b.split('|').map(s => s.trim())) if (/^2nd /i.test(t) && has(a, t.slice(4))) return true;
+  return false;
+}
+
+const mk = o => Object.assign({ status: 'ok', cands: [], holder: null, holders: [], soft: false, time: 360, miss: '', ctx: '' }, o);
+const IGN_T = new Set(['crypto']);
+const rawToks = g => g.split('|').map(s => s.trim()).filter(Boolean);
+const reqToks = g => rawToks(g).filter(t => !IGN_T.has(nt(t)));
+const holdersOf = (pool, tok) => pool.filter(r => mainSet(r).has(nt(tok)));
+const uniq = a => Array.from(new Set(a));
+const addOp = (rec, tokens, queue) => ({ type: 'add', rec, tokens, queue: queue || null });
+const moveTokOp = (from, to, tokens) => ({ type: 'movetok', from, to, tokens });
+const nTok = (r, toks) => toks.filter(t => mainSet(r).has(nt(t))).length;
+
+/* un candidato es válido si no deja a un task y su 2nd con la misma hora de entrada */
+function tokOk(pool, r, missing, allToks, am) {
+  const norm = new Set(allToks.map(nt));
+  for (const t of missing) {
+    if (/^2nd /i.test(t)) { const b = t.slice(4).trim(); if (norm.has(nt(b)) && holdersOf(pool, b).some(h => h === r || h.start === r.start)) return false; }
+    else if (norm.has(nt('2nd ' + t)) && holdersOf(pool, '2nd ' + t).some(h => h === r || h.start === r.start)) return false;
+    if (am && ['balances', 'pending'].includes(nt(t)) && r.start !== 360) return false;
+  }
+  return true;
+}
+
+/* revisa task por task: basta con que alguien del turno lo tenga escrito, en el orden que sea */
+function coverGroups(E, base, pool, groups, o) {
+  o = o || {};
+  const allToks = uniq(groups.reduce((a, g) => a.concat(reqToks(g)), []));
+  groups.forEach(g => {
+    const toks = reqToks(g);
+    const missing = toks.filter(t => !holdersOf(pool, t).length);
+    const holders = uniq(pool.filter(r => toks.some(t => mainSet(r).has(nt(t)))));
+    const whole = missing.length === toks.length;
+    const e = mk(Object.assign({}, base, { group: g, holder: holders[0] || null, holders, status: missing.length ? 'missing' : 'ok', miss: whole ? g : missing.join(' | '), ctx: whole ? '' : g, note: o.note || '' }));
+    if (missing.length) {
+      const ranked = pool.slice().sort((a, b) => (nTok(b, toks) - nTok(a, toks)) || (splitTask(a).main.length - splitTask(b).main.length));
+      ranked.forEach(r => {
+        if (!tokOk(pool, r, missing, allToks, o.am)) return;
+        const have = nTok(r, toks);
+        e.cands.push({ rec: r, why: have ? 'ya lleva ' + have + ' de ese grupo' : (mainText(r) ? 'ahora tiene: ' + mainText(r) : 'sin task'), op: addOp(r, missing, o.queue ? o.queue(g) : null) });
+      });
+    }
+    E.push(e);
+  });
+  return allToks;
+}
+
+/* reglas: un task y su 2nd no pueden entrar a la misma hora */
+function pairRules(E, base, pool, allToks, am) {
+  const norm = new Set(allToks.map(nt));
+  allToks.forEach(t => {
+    if (!/^2nd /i.test(t)) return;
+    const b = t.slice(4).trim(); if (!norm.has(nt(b))) return;
+    const HB = holdersOf(pool, b), H2 = holdersOf(pool, t);
+    if (!HB.length || !H2.length) return;
+    if (HB.some(x => H2.some(y => x !== y && x.start !== y.start))) return;
+    const e = mk(Object.assign({}, base, { group: b + ' / ' + t, holder: HB[0], status: 'rule', text: '“' + b + '” y “' + t + '” los llevan personas que entran a la misma hora (' + joinPeople(HB) + ' y ' + joinPeople(H2) + ').' }));
+    pool.forEach(p => {
+      if (HB.includes(p) || H2.includes(p)) return;
+      if (!HB.some(x => x.start === p.start)) e.cands.push({ rec: p, why: 'entra ' + fmt(p.start) + ', para “' + t + '”', op: moveTokOp(H2, p, [t]) });
+      else if (!H2.some(x => x.start === p.start)) e.cands.push({ rec: p, why: 'entra ' + fmt(p.start) + ', para “' + b + '”', op: moveTokOp(HB, p, [b]) });
+    });
+    E.push(e);
+  });
+}
+const joinPeople = a => uniq(a.map(r => r.name)).join(' y ');
+
+/* ---------- Processing ---------- */
+function planProcessing(day, E) {
+  const fsDay = ['Friday', 'Saturday', 'Sunday'].includes(day.dow);
+  [true, false].forEach(am => {
+    const shift = shiftName(am), time = am ? 360 : 900, base = { dept: 'Processing', shift, time };
+    const pool = day.recs.filter(r => r.area === 'Processing' && validShift(r) && isAM(r) === am);
+    const n = pool.length;
+    if (!n) { E.push(mk(Object.assign({}, base, { group: 'Turno', status: 'empty', text: 'No hay nadie de Processing en el turno de la ' + shift + '.' }))); return; }
+    const tpl = T_PROC[am ? 'AM' + Math.max(4, Math.min(5, n)) + (fsDay ? '_FS' : '_MT') : 'PM' + Math.max(3, Math.min(4, n))];
+    const off = am ? (n < 4 || n > 5) : (n < 3 || n > 4);
+    const note = off ? 'Hoy hay ' + n + ' personas y el macro reparte con ' + (am ? '4 o 5' : '3 o 4') + '.' : '';
+    const allToks = coverGroups(E, base, pool, tpl, { am, note });
+    pairRules(E, base, pool, allToks, am);
+    if (am) {
+      const hb = uniq(holdersOf(pool, 'Balances').concat(holdersOf(pool, 'Pending')));
+      if (hb.length && !hb.some(r => r.start === 360)) {
+        const e = mk(Object.assign({}, base, { group: 'Balances | Pending', holder: hb[0], status: 'rule', text: 'Balances y Pending de la mañana los lleva ' + joinPeople(hb) + ', y el macro los da a quien entra a las 6:00 am.' }));
+        pool.filter(p => p.start === 360 && !hb.includes(p)).forEach(p => e.cands.push({ rec: p, why: 'entra 6:00 am', op: moveTokOp(hb, p, ['Balances', 'Pending']) }));
+        E.push(e);
+      }
+    }
+  });
+}
+
+/* ---------- Training ---------- */
+function planTraining(day, E) {
+  const ad = day.recs.find(r => nt(r.name) === 'adriana vasquez' && validShift(r));
+  if (ad) coverGroups(E, { dept: 'Training', shift: 'día', time: ad.start }, [ad], [T_TRAIN_AD]);
+  else E.push(mk({ dept: 'Training', shift: 'día', group: T_TRAIN_AD, status: 'empty', soft: true, text: 'Adriana no está en turno hoy, así que nadie lleva “' + T_TRAIN_AD + '”.' }));
+  const tr = day.recs.filter(r => TRAINERS.includes(nt(r.name)) && validShift(r));
+  if (!tr.length) { E.push(mk({ dept: 'Training', shift: 'día', group: 'Briefings | Cx Score', status: 'empty', text: 'Hoy no hay nadie de Kendra, Natalia o Víctor en turno: nadie lleva Briefings ni Cx Score.' })); return; }
+  [true, false].forEach(am => {
+    const pool = tr.filter(r => isAM(r) === am), shift = shiftName(am), time = am ? 360 : 900, n = pool.length, base = { dept: 'Training', shift, time };
+    if (!n) return;
+    if (n === 1) coverGroups(E, base, pool, ['Briefings | Cx Score']);
+    else if (n === 2) coverGroups(E, base, pool, ['Briefings', 'Cx Score']);
+    else E.push(mk(Object.assign({}, base, { group: 'Distribución', status: 'info', soft: true, text: 'Hay ' + n + ' trainers en la ' + shift + ' y el macro solo reparte con 1 o 2.' })));
+  });
+}
+
+/* ---------- Decline ---------- */
+function planDecline(day, E) {
+  const pool = day.recs.filter(r => r.area === 'Decline' && validShift(r)).sort((a, b) => a.start - b.start);
+  const n = pool.length;
+  if (!n) { E.push(mk({ dept: 'Decline', shift: 'día', group: 'Decline', status: 'empty', time: 420, text: 'Hoy no hay nadie de Decline en turno.' })); return; }
+  if (n === 2) pool.forEach(r => coverGroups(E, { dept: 'Decline', shift: shiftName(isAM(r)), time: r.start }, [r], [T_DECLINE2]));
+  else if (n === 3) coverGroups(E, { dept: 'Decline', shift: 'día', time: pool[0].start }, pool, [T_DECLINE3[0], T_DECLINE3[1]]);
+  else E.push(mk({ dept: 'Decline', shift: 'día', group: 'Distribución', status: 'info', soft: true, time: 420, text: 'Decline tiene ' + n + ' personas hoy y el macro solo reparte con 2 o 3.' }));
+}
+
+/* ---------- Third Party (Casino) ---------- */
+function planCasino(day, E) {
+  const fsDay = ['Friday', 'Saturday', 'Sunday'].includes(day.dow);
+  [true, false].forEach(am => {
+    const pool = day.recs.filter(r => r.area === 'Third Party' && validShift(r) && isAM(r) === am), shift = shiftName(am), time = am ? 360 : 900, n = pool.length, base = { dept: 'Casino', shift, time };
+    if (!n) { E.push(mk(Object.assign({}, base, { group: 'Turno', status: 'empty', text: 'No hay nadie de Third Party en la ' + shift + ': Casino queda sin cubrir.' }))); return; }
+    if (n === 1) { coverGroups(E, base, pool, [T_CASINO1], { queue: () => 'Casino' }); return; }
+    const B = fsDay ? T_CASINO_B_FS : T_CASINO_B_MT;
+    const allToks = coverGroups(E, base, pool, [T_CASINO_A, B], { queue: g => (g === T_CASINO_A || fsDay) ? 'Casino' : null });
+    pairRules(E, base, pool, allToks, am);
+  });
+}
+
+/* ---------- VIP ---------- */
+function planVip(day, E) {
+  [true, false].forEach(am => {
+    const pool = day.recs.filter(r => r.area === 'Vip' && validShift(r) && isAM(r) === am), shift = shiftName(am), time = am ? 360 : 900, n = pool.length, base = { dept: 'VIP', shift, time };
+    if (!n) { E.push(mk(Object.assign({}, base, { group: 'Turno', status: 'empty', text: 'No hay nadie de VIP en la ' + shift + '.' }))); return; }
+    if (n === 1) { coverGroups(E, base, pool, [T_VIP1]); return; }
+    const allToks = coverGroups(E, base, pool, [T_VIP_P, T_VIP_B]);
+    pairRules(E, base, pool, allToks, am);
+    const hP = holdersOf(pool, 'Vip Emails')[0];
+    if (hP && hP.queue !== 'Phones') E.push(mk(Object.assign({}, base, { group: T_VIP_P, holder: hP, status: 'rule', soft: true, text: hP.name + ' lleva Vip Emails pero su cola es ' + hP.queue + ' (el macro lo reparte a quien está en Phones).' })));
+  });
+}
+
+/* ---------- Senior / Tier 3 / Tier 2 ---------- */
+function stSearch(c, am, pins) {
+  const mid = am ? 540 : 780, pref = am ? 360 : 900, cur = [-1, -1, -1, -1, -1, -1], best = [-1, -1, -1, -1, -1, -1];
+  let bestScore = -1;
+  const dept = i => String(c[i].area).toUpperCase();
+  const used = i => { for (let k = 1; k <= 5; k++) if (cur[k] === i) return true; return false; };
+  const eligible = (i, role) => {
+    if (role <= 2 && dept(i) !== 'SENIOR' && dept(i) !== 'TIER 3') return false;
+    if (role >= 4) for (let k = 3; k < role; k++) if (cur[k] >= 0 && c[cur[k]].start === c[i].start) return false;
+    return true;
+  };
+  const score = () => {
+    const emails = (cur[1] >= 0) + (cur[2] >= 0);
+    const iv = [];
+    for (let k = 3; k <= 5; k++) if (cur[k] >= 0) iv.push([Math.max(c[cur[k]].start, 360), Math.min(c[cur[k]].end, 1380)]);
+    let cov = 0;
+    if (iv.length) {
+      iv.sort((a, b) => a[0] - b[0]);
+      let ce = iv[0][1], covered = iv[0][1] - iv[0][0], gap = 0;
+      for (let i = 1; i < iv.length; i++) {
+        if (iv[i][0] > ce) { gap += iv[i][0] - ce; covered += iv[i][1] - iv[i][0]; ce = iv[i][1]; }
+        else if (iv[i][1] > ce) { covered += iv[i][1] - ce; ce = iv[i][1]; }
+      }
+      cov = covered - gap * 0.25;
+    }
+    const pf = (cur[3] >= 0 && c[cur[3]].start === pref) ? 500 : 0;
+    return emails * 1e9 + (cur[3] >= 0) * 1e8 + (cur[4] >= 0) * 1e7 + (cur[5] >= 0) * 1e6 + cov * 10 + pf;
+  };
+  const rec = role => {
+    if (role > 5) { const s = score(); if (s > bestScore) { bestScore = s; for (let k = 1; k <= 5; k++) best[k] = cur[k]; } return; }
+    if (role === 2 && cur[1] < 0) { cur[2] = -1; rec(3); return; }
+    if (role === 4 && cur[3] < 0) { cur[4] = -1; rec(5); return; }
+    if (role === 5) {
+      if (cur[3] < 0 || cur[4] < 0 || c[cur[4]].start !== mid) { cur[5] = -1; rec(6); return; }
+    }
+    if (pins[role] !== undefined) {
+      const p = pins[role];
+      if (!used(p) && eligible(p, role)) { cur[role] = p; rec(role + 1); cur[role] = -1; }
+      return;
+    }
+    for (let i = 0; i < c.length; i++) if (!used(i) && eligible(i, role)) { cur[role] = i; rec(role + 1); cur[role] = -1; }
+    cur[role] = -1; rec(role + 1);
+  };
+  rec(1);
+  return bestScore < 0 ? null : best;
+}
+
+function planSenior(day, E) {
+  [true, false].forEach(am => {
+    const c = day.recs.filter(r => ['Senior', 'Tier 3', 'Tier 2'].includes(r.area) && validShift(r) && isAM(r) === am && ['Phones', 'Chats', 'Tickets'].includes(r.queue));
+    const shift = shiftName(am), time = am ? 360 : 900, base = { dept: 'Senior / Tier', shift, time };
+    if (!c.length) { E.push(mk(Object.assign({}, base, { group: 'Turno', status: 'empty', text: 'No hay nadie de Senior, Tier 3 o Tier 2 en la ' + shift + '.' }))); return; }
+    const toksOf = k => reqToks(T_ST[k - 1]);
+    // quién lleva cada rol (por task suelto, sin importar el orden ni cómo estén agrupados)
+    const holder = [null], usedIdx = new Set();
+    for (let k = 1; k <= 5; k++) {
+      let h = -1, bestN = 0;
+      c.forEach((r, i) => { if (usedIdx.has(i)) return; const n = nTok(r, toksOf(k)); if (n > bestN) { bestN = n; h = i; } });
+      if (h >= 0) usedIdx.add(h);
+      holder.push(h >= 0 ? h : null);
+    }
+    const missingOf = k => toksOf(k).filter(t => !holdersOf(c, t).length);
+    let best = null, pins = {};
+    for (let k = 1; k <= 5; k++) if (holder[k] !== null && !missingOf(k).length) pins[k] = holder[k];
+    for (let tries = 0; tries <= 5; tries++) {
+      best = stSearch(c, am, pins);
+      if (best) break;
+      const drop = [5, 4, 3, 2, 1].find(k => pins[k] !== undefined); if (!drop) break;
+      delete pins[drop];
+    }
+    best = best || [-1, -1, -1, -1, -1, -1];
+    const mid = am ? 540 : 780;
+    const r4 = holder[4] !== null ? c[holder[4]] : (best[4] >= 0 ? c[best[4]] : null);
+    const needThird = !!(r4 && r4.start === mid);
+    const startsOf = k => (holder[k] !== null ? holder[k] : best[k]);
+    for (let k = 1; k <= 5; k++) {
+      const g = T_ST[k - 1], miss = missingOf(k);
+      if (k === 5 && !needThird && !toksOf(5).some(t => holdersOf(c, t).length)) continue;
+      const holders = uniq(c.filter(r => toksOf(k).some(t => mainSet(r).has(nt(t)))));
+      const whole = miss.length === toksOf(k).length;
+      const e = mk(Object.assign({}, base, { group: g, holder: holders[0] || null, holders, status: miss.length ? 'missing' : 'ok', miss: whole ? g : miss.join(' | '), ctx: whole ? '' : g }));
+      if (miss.length) {
+        const seen = new Set(), q = (k === 3 && whole) ? 'Tickets' : null;
+        const alts = c.map((r, i) => i).filter(i => {
+          const d = String(c[i].area).toUpperCase();
+          if (k <= 2 && d !== 'SENIOR' && d !== 'TIER 3') return false;
+          if ([1, 2, 3, 4, 5].some(x => x !== k && toksOf(x).some(t => mainSet(c[i]).has(nt(t))))) return false;
+          if (k === 1 && holdersOf(c, '2nd Emails').includes(c[i])) return false;
+          if (k === 2 && holdersOf(c, 'Emails').includes(c[i])) return false;
+          if (k >= 4) for (let x = 3; x < k; x++) { const hx = startsOf(x); if (hx !== null && hx >= 0 && c[hx].start === c[i].start) return false; }
+          return true;
+        }).sort((a, b) => nTok(c[b], toksOf(k)) - nTok(c[a], toksOf(k)));
+        const first = (!whole && holder[k] !== null) ? [holder[k]] : (best[k] >= 0 ? [best[k]] : []);
+        first.concat(alts).forEach(i => {
+          if (seen.has(i)) return; seen.add(i);
+          e.cands.push({ rec: c[i], why: c[i].area + ', entra ' + fmt(c[i].start) + (mainText(c[i]) ? ', ahora tiene: ' + mainText(c[i]) : ''), op: addOp(c[i], miss, q) });
+        });
+        if (k === 5) e.note = 'El 2nd Tickets entra a la hora intermedia, así que el macro pide también un 3rd.';
+      }
+      E.push(e);
+    }
+    // reacomodo completo con la búsqueda del macro, solo si cubre más roles sin quitar ninguno
+    if ([1, 2].some(k => missingOf(k).length)) {
+      const filledNow = [1, 2, 3, 4, 5].filter(k => (holder[k] !== null && !missingOf(k).length) || best[k] >= 0).length;
+      const pin3 = (holder[3] !== null && !missingOf(3).length) ? { 3: holder[3] } : {};
+      const full = stSearch(c, am, pin3) || stSearch(c, am, {});
+      if (full) {
+        const filledFull = [1, 2, 3, 4, 5].filter(k => full[k] >= 0).length;
+        const keeps = [1, 2, 3, 4, 5].every(k => holder[k] === null || missingOf(k).length || full[k] >= 0);
+        if (filledFull > filledNow && keeps) {
+          const ops = [], desc = [];
+          for (let k = 1; k <= 5; k++) if (holder[k] !== null && holder[k] !== full[k] && !missingOf(k).length) ops.push({ type: 'put', rec: c[holder[k]], task: '', queue: null });
+          for (let k = 1; k <= 5; k++) if (full[k] >= 0 && (holder[k] !== full[k] || missingOf(k).length)) { ops.push({ type: 'put', rec: c[full[k]], task: T_ST[k - 1], queue: k === 3 ? 'Tickets' : null }); desc.push(c[full[k]].name + ' lleva ' + T_ST[k - 1]); }
+          E.push(mk(Object.assign({}, base, { group: 'Reacomodo', status: 'rule', text: 'Con la lógica del macro se cubren ' + filledFull + ' de 5 roles en la ' + shift + ' (hoy ' + filledNow + '): ' + desc.join('; ') + '.', cands: [{ rec: null, label: 'Aplicar el reacomodo del macro', why: desc.join('; '), op: { type: 'multi', ops } }] })));
+        }
+      }
+    }
+    // reglas
+    [1, 2].forEach(k => toksOf(k).forEach(t => holdersOf(c, t).filter(r => String(r.area).toUpperCase() === 'TIER 2').forEach(r =>
+      E.push(mk(Object.assign({}, base, { group: t, holder: r, status: 'rule', text: r.name + ' es Tier 2 y lleva “' + t + '”; el macro solo lo da a Senior o Tier 3.' }))))));
+    [[3, 4], [3, 5], [4, 5]].forEach(([a, b]) => {
+      if (holder[a] !== null && holder[b] !== null && c[holder[a]].start === c[holder[b]].start) {
+        const e = mk(Object.assign({}, base, { group: T_ST[a - 1] + ' / ' + T_ST[b - 1], holder: c[holder[b]], status: 'rule', text: c[holder[a]].name + ' y ' + c[holder[b]].name + ' entran a la misma hora y llevan Tickets en distintos niveles (principal, 2nd o 3rd).' }));
+        c.forEach((p, i) => {
+          if (holder.includes(i)) return;
+          const clash = [3, 4, 5].some(q => q !== b && holder[q] !== null && c[holder[q]].start === p.start);
+          if (!clash) e.cands.push({ rec: p, why: p.area + ', entra ' + fmt(p.start), op: { type: 'move', from: c[holder[b]], to: p, task: T_ST[b - 1] } });
+        });
+        E.push(e);
+      }
+    });
+  });
+}
+
+function planDay(day) {
+  const E = [];
+  planProcessing(day, E); planTraining(day, E); planDecline(day, E); planCasino(day, E); planVip(day, E); planSenior(day, E);
+  return E;
+}
+
+function taskIssues(day) {
+  const out = [];
+  planDay(day).forEach(e => {
+    if (e.status === 'ok') return;
+    const base = { type: 'assign', dept: e.dept, shift: e.shift, group: e.group, time: e.time, cands: e.cands, soft: !!e.soft, note: e.note || '', ctx: e.ctx || '' };
+    if (e.status === 'missing') out.push(Object.assign(base, { kind: 'missing', group: e.miss, id: 'assign|' + e.dept + '|' + e.shift + '|' + e.miss + '|missing' }));
+    else if (e.status === 'rule') out.push(Object.assign(base, { kind: 'rule', text: e.text, id: 'assign|' + e.dept + '|' + e.shift + '|' + e.group + '|rule|' + (e.holder ? e.holder.id : '') }));
+    else out.push(Object.assign(base, { kind: e.status, text: e.text, id: 'assign|' + e.dept + '|' + e.shift + '|' + e.group + '|' + e.status }));
+  });
+  return out;
+}
+
+/* aplica una acción (asignar, intercambiar o mover) y devuelve los cambios hechos */
+function runOp(op) {
+  const mv = [];
+  const setF = (rec, k, v) => { if (rec[k] !== v) { mv.push({ rec, k, from: rec[k] }); rec[k] = v; } };
+  if (op.type === 'set') { setF(op.rec, 'task', withTask(op.rec, op.task)); if (op.queue) setF(op.rec, 'queue', op.queue); }
+  else if (op.type === 'swap') { const ta = mainText(op.a), tb = mainText(op.b); setF(op.a, 'task', withTask(op.a, tb)); setF(op.b, 'task', withTask(op.b, ta)); }
+  else if (op.type === 'add') {
+    const have = new Set(mainSet(op.rec)), add = op.tokens.filter(t => !have.has(nt(t)));
+    if (add.length) setF(op.rec, 'task', withTask(op.rec, splitTask(op.rec).main.concat(add).join(' | ')));
+    if (op.queue) setF(op.rec, 'queue', op.queue);
+  }
+  else if (op.type === 'movetok') {
+    const drop = new Set(op.tokens.map(nt));
+    op.from.forEach(r => { const keep = splitTask(r).main.filter(t => !drop.has(nt(t))); if (keep.length !== splitTask(r).main.length) setF(r, 'task', withTask(r, keep.join(' | '))); });
+    const have = new Set(mainSet(op.to)), add = op.tokens.filter(t => !have.has(nt(t)));
+    if (add.length) setF(op.to, 'task', withTask(op.to, splitTask(op.to).main.concat(add).join(' | ')));
+  }
+  else if (op.type === 'put') { setF(op.rec, 'task', withTask(op.rec, op.task)); if (op.queue) setF(op.rec, 'queue', op.queue); }
+  else if (op.type === 'multi') { op.ops.forEach(o => { runOp(o).forEach(m => mv.push(m)); }); }
+  else if (op.type === 'move') { setF(op.to, 'task', withTask(op.to, op.task)); setF(op.from, 'task', withTask(op.from, '')); }
+  return mv;
+}
+
+/* ===== BRIEFING CREATOR: motor que arma las sesiones ===== */
+const BR_STEP = 15;
+const BR_EDGE = 60; // nunca en la primera ni en la última hora del turno de una persona
+let BR_OPTS = null;
+function brSetOpts(o) { BR_OPTS = o; }
+/* hora más temprana permitida para esta persona (la que eligió el usuario: mañana o tarde) */
+function brEarliest(r) {
+  const o = BR_OPTS; if (!o) return 0;
+  if (o.start2 != null) return r.start >= 780 ? o.start2 : o.start;
+  if (o.winLo != null) return o.winLo;
+  return 0;
+}
+const BR_DAY_START = 360, BR_DAY_END = 1380;
+const brFirst = n => String(n).split(' ')[0];
+
+/* quién ya está fuera en cada momento: breaks de todos + sesiones ya puestas */
+function brAways(day, extra) {
+  const out = [];
+  day.recs.forEach(r => {
+    if (!validShift(r)) return;
+    ['b1', 'b2'].forEach(k => { if (r[k] != null) out.push({ rec: r, s: r[k], e: r[k] + CFG.dur, why: 'break de las ' + fmt(r[k]) }); });
+  });
+  return out.concat(extra || []);
+}
+
+/* quién respalda a quién: el principal y su 2nd (y el 3rd) del mismo equipo */
+function brPartners(day, r) {
+  const mine = splitTask(r).main.map(nt).filter(t => t && !IGN_T.has(t));
+  const out = new Set();
+  day.recs.forEach(o => {
+    if (o === r || grp(o.area) !== grp(r.area) || !validShift(o) || isAM(o) !== isAM(r)) return;
+    const os = mainSet(o);
+    for (const n of mine) {
+      let hit = false;
+      if (/^2nd /.test(n)) { const b = n.slice(4); hit = os.has(b) || os.has('3rd ' + b); }
+      else if (/^3rd /.test(n)) hit = os.has('2nd ' + n.slice(4));
+      else hit = os.has('2nd ' + n);
+      if (hit) { out.add(o); break; }
+    }
+  });
+  return Array.from(out);
+}
+
+/* cuántas personas están fuera a la vez, como máximo, dentro de la ventana */
+function brPeak(items, t, e) {
+  const ev = [];
+  items.forEach(a => { ev.push([Math.max(a.s, t), 1], [Math.min(a.e, e), -1]); });
+  ev.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+  let cur = 0, mx = 0;
+  ev.forEach(x => { cur += x[1]; if (cur > mx) mx = cur; });
+  return mx;
+}
+
+/* tope efectivo: una sesión estricta ya puesta no se puede romper con una relajada encima */
+const brCapEff = (xs, cap) => xs.reduce((m, a) => a.sc != null ? Math.min(m, a.sc) : m, cap);
+
+/* ¿puede esta persona estar en el briefing de t a e sin romper nada? (cap = máximo fuera a la vez por cola o por área) */
+function brCheck(day, r, t, e, aways, cap) {
+  cap = cap || 1;
+  if (!validShift(r)) return { ok: false, code: 'turno', reason: 'su turno no está bien escrito' };
+  if (t < r.start || e > r.end) return { ok: false, code: 'turno', reason: 'su turno (' + fmt(r.start) + ' a ' + fmt(r.end) + ') no cubre ese horario' };
+  if (t < r.start + BR_EDGE || e > r.end - BR_EDGE) return { ok: false, code: 'borde', reason: 'no puede ser en su primera ni en su última hora de turno (' + fmt(r.start) + ' a ' + fmt(r.end) + ')' };
+  const early = brEarliest(r);
+  if (t < early) return { ok: false, code: 'hora', reason: 'queda antes de las ' + fmt(early) + ', que es cuando se puede empezar' };
+  for (const k of ['b1', 'b2']) {
+    if (r[k] != null && r[k] < e && r[k] + CFG.dur > t) return { ok: false, code: 'break', k, reason: 'su break de las ' + fmt(r[k]) + ' se cruza' };
+  }
+  const ovl = x => x.s < e && x.e > t;
+  if (QCHK.includes(r.queue)) {
+    const xs = aways.filter(a => a.rec !== r && a.rec.queue === r.queue && ovl(a));
+    if (xs.length && brPeak(xs, t, e) + 1 > brCapEff(xs, cap)) return { ok: false, code: 'cola', reason: 'en ' + r.queue + ' ya está fuera ' + brFirst(xs[0].rec.name) + ' (' + xs[0].why + ')' };
+  }
+  if (AREA_UNIQUE.includes(r.area)) {
+    const xs = aways.filter(a => a.rec !== r && a.rec.area === r.area && ovl(a));
+    if (xs.length && brPeak(xs, t, e) + 1 > brCapEff(xs, cap)) return { ok: false, code: 'area', reason: 'en ' + r.area + ' ya está fuera ' + brFirst(xs[0].rec.name) + ' (' + xs[0].why + ')' };
+  }
+  const ps = brPartners(day, r);
+  const bad = ps.find(p => aways.some(a => a.rec === p && ovl(a)));
+  if (bad) return { ok: false, code: 'task', reason: 'su respaldo de task, ' + brFirst(bad.name) + ', estaría fuera' };
+  const soft = [];
+  ps.forEach(p => { if (validShift(p) && (p.start > t || p.end < e)) soft.push(brFirst(p.name) + ' (respaldo de sus tasks) no está en turno todo ese rato'); });
+  return { ok: true, soft };
+}
+
+/* rango de horas en el que se pueden poner sesiones: franja elegida o hora fija con margen */
+function brRange(opts) {
+  if (opts.winLo != null) return { lo: opts.winLo, hi: opts.winHi };
+  if (opts.tol == null) return { lo: BR_DAY_START, hi: BR_DAY_END };
+  return { lo: Math.max(BR_DAY_START, opts.start - opts.tol), hi: Math.min(BR_DAY_END, opts.start + opts.tol + opts.dur) };
+}
+const brPrefs = opts => [opts.start].concat(opts.start2 != null ? [opts.start2] : []);
+const brDist = (opts, t) => Math.min.apply(null, brPrefs(opts).map(p => Math.abs(t - p)));
+function brGrid(lo, hi, dur, opts) {
+  const out = [];
+  for (let t = lo; t + dur <= hi; t += BR_STEP) out.push(t);
+  brPrefs(opts).forEach(p => { if (p >= lo && p + dur <= hi && !out.includes(p)) out.push(p); });
+  return out.sort((a, b) => a - b);
+}
+function brStarts(dur, opts) { const r = brRange(opts); return brGrid(r.lo, r.hi, dur, opts); }
+function brStartsAll(dur, opts) { return brGrid(BR_DAY_START, BR_DAY_END, dur, opts); }
+
+function brPick(days, opts) {
+  const names = new Set(opts.names), areas = new Set(opts.areas), per = [];
+  opts.dayIdx.forEach(di => {
+    const seen = new Set(), list = [];
+    days[di].recs.forEach(r => {
+      const k = nt(r.name);
+      if (areas.has(nt(r.area)) && names.has(k) && validShift(r) && !seen.has(k) && !(opts.banned && opts.banned[k] && opts.banned[k].includes(di))) { seen.add(k); list.push(r); }
+    });
+    per[di] = list;
+  });
+  return per;
+}
+
+function brCaps(opts) { return opts.flex ? [1, 2, 3] : [1]; }
+
+function brPlan(days, opts, rng) {
+  BR_OPTS = opts;
+  const dur = opts.dur, min = opts.min || 1, per = brPick(days, opts), extra = {};
+  if (opts.fixed) Object.keys(opts.fixed).forEach(k => { extra[k] = opts.fixed[k].slice(); });
+  const all = new Map();
+  opts.dayIdx.forEach(di => per[di].forEach(r => { const k = nt(r.name); if (!all.has(k)) all.set(k, r.name); }));
+  const left = new Set(all.keys()), sessions = [];
+  const starts = brStarts(dur, opts);
+  // primero la regla estricta (1 por cola); si no alcanza el mínimo, se relaja de a poco
+  for (const cap of brCaps(opts)) {
+    for (let guard = 0; guard < 200 && left.size; guard++) {
+      const cands = [];
+      opts.dayIdx.forEach(di => {
+        const day = days[di], cand = per[di].filter(r => left.has(nt(r.name)));
+        if (!cand.length) return;
+        const aw = brAways(day, extra[di]);
+        const scarcity = r => starts.filter(t => brCheck(day, r, t, t + dur, aw, cap).ok).length;
+        const ordered = cand.map(r => ({ r, n: scarcity(r) + (rng ? rng() * 1.5 : 0) })).filter(x => x.n > 0).sort((a, b) => a.n - b.n || a.r.name.localeCompare(b.r.name)).map(x => x.r);
+        starts.forEach(t => {
+          const A = aw.slice(), members = [];
+          ordered.forEach(r => {
+            const c = brCheck(day, r, t, t + dur, A, cap);
+            if (c.ok) { members.push({ rec: r, soft: c.soft || [] }); A.push({ rec: r, s: t, e: t + dur, why: 'briefing', sc: cap }); }
+          });
+          if (!members.length) return;
+          const near = sessions.length ? Math.min.apply(null, sessions.map(x => Math.abs(t - x.start))) : 0;
+          const gap = Math.max(60, dur + 30);
+          cands.push({ di, t, members, key: [members.length, opts.spread && sessions.length ? -Math.abs(Math.min(near, 240) - gap) : 0, -brDist(opts, t), -di] });
+        });
+      });
+      let best = null;
+      if (cands.length) {
+        cands.sort((a, b) => b.key[0] - a.key[0] || b.key[1] - a.key[1] || b.key[2] - a.key[2] || b.key[3] - a.key[3]);
+        best = cands[0];
+        if (rng) {
+          const pool = cands.filter(c => c.members.length >= min && c.members.length >= cands[0].members.length - (rng() < 0.3 ? 1 : 0));
+          if (pool.length) { const top = pool.slice(0, 6); best = top[Math.floor(rng() * top.length)]; }
+        }
+      }
+      if (!best || best.members.length < min) break;
+      sessions.push({ di: best.di, day: days[best.di], start: best.t, end: best.t + dur, members: best.members, cap });
+      extra[best.di] = (extra[best.di] || []).concat(best.members.map(m => ({ rec: m.rec, s: best.t, e: best.t + dur, why: 'briefing', sc: cap })));
+      best.members.forEach(m => left.delete(nt(m.rec.name)));
+    }
+  }
+  // quien quedó sin lugar puede sumarse a una sesión ya armada si cabe
+  Array.from(left).forEach(k => {
+    for (const s of sessions) {
+      const r = per[s.di] && per[s.di].find(x => nt(x.name) === k); if (!r) continue;
+      const c = brCheck(days[s.di], r, s.start, s.end, brAways(days[s.di], extra[s.di]), s.cap);
+      if (c.ok) { s.members.push({ rec: r, soft: c.soft || [] }); extra[s.di].push({ rec: r, s: s.start, e: s.end, why: 'briefing', sc: s.cap || 1 }); left.delete(k); break; }
+    }
+  });
+  sessions.sort((a, b) => a.di - b.di || a.start - b.start);
+  const unplaced = [];
+  left.forEach(k => unplaced.push(brWhy(days, opts, per, extra, k, all.get(k), starts)));
+  return { sessions, unplaced, total: all.size, extra, all, opts };
+}
+
+/* prueba muchas combinaciones y se queda con la que mete a más gente en menos sesiones */
+function brScore(plan) { return [plan.total - plan.unplaced.length, -plan.sessions.length, -plan.sessions.filter(x => (x.cap || 1) > 1).length]; }
+function brBetter(a, b) { for (let i = 0; i < a.length; i++) { if (a[i] > b[i]) return true; if (a[i] < b[i]) return false; } return false; }
+function brPlanBest(days, opts, ms) {
+  let best = brPlan(days, opts), seed = 12345, tries = 0;
+  const rng = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const t0 = Date.now();
+  while (Date.now() - t0 < (ms || 800) && tries < 80 && best.unplaced.length) {
+    const p = brPlan(days, opts, rng); tries++;
+    if (brBetter(brScore(p), brScore(best))) best = p;
+  }
+  best.tries = tries;
+  return best;
+}
+
+/* por qué no entró una persona, y cuándo sí podría */
+function brWhy(days, opts, per, extra, key, name, starts) {
+  const dur = opts.dur, counts = new Map(), working = [];
+  let sample = null, okAny = false;
+  opts.dayIdx.forEach(di => {
+    const r = per[di].find(x => nt(x.name) === key); if (!r) return;
+    working.push(di); sample = sample || r;
+    const aw = brAways(days[di], extra[di]), capMax = brCaps(opts).slice(-1)[0];
+    starts.forEach(t => { const c = brCheck(days[di], r, t, t + dur, aw, capMax); if (!c.ok) counts.set(c.reason, (counts.get(c.reason) || 0) + 1); else okAny = true; });
+  });
+  const reasons = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => x[0]);
+  if (!working.length) reasons.unshift('no trabaja en los días elegidos');
+  if (okAny) reasons.unshift('sí cabe solo, pero no se junta con otras ' + Math.max(1, (opts.min || 1) - 1) + ' personas a la misma hora sin romper la regla de 1 por cola y 1 de Processing');
+  // alternativa: cualquier hora del día en los días elegidos
+  let alt = null;
+  if (working.length) {
+    const wide = brStartsAll(dur, opts);
+    working.forEach(di => {
+      const r = per[di].find(x => nt(x.name) === key), aw = brAways(days[di], extra[di]), capMax = brCaps(opts).slice(-1)[0];
+      wide.forEach(t => { if (brCheck(days[di], r, t, t + dur, aw, capMax).ok) { const d = brDist(opts, t); if (!alt || d < alt.d) alt = { di, t, d }; } });
+    });
+  }
+  return { name, key, rec: sample, reasons, alt };
+}
+
+/* recomendaciones con lo que se revisó */
+function brRecommend(days, opts, plan) {
+  BR_OPTS = opts;
+  const out = [], dur = opts.dur;
+  const placed = plan.total - plan.unplaced.length;
+  const joinN = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1];
+  const solo = plan.unplaced.filter(u => /^sí cabe solo/.test(u.reasons[0] || ''));
+  if (solo.length) out.push({ kind: 'warn', text: joinN(solo.map(u => u.name)) + (solo.length === 1 ? ' puede asistir, pero no hay' : ' pueden asistir, pero no hay') + ' otras personas que quepan a la misma hora respetando las reglas (1 por cola y 1 de Processing). Prueba bajando el mínimo por sesión, moviendo la hora o cambiando algún break.' });
+  plan.unplaced.filter(u => !solo.includes(u)).forEach(u => {
+    if (u.alt) out.push({ kind: 'warn', text: u.name + ' no entra entre ' + fmt(brRange(opts).lo) + ' y ' + fmt(brRange(opts).hi) + ' (' + (u.reasons[0] || 'sin hueco') + '), pero sí podría el ' + days[u.alt.di].label + ' a las ' + fmt(u.alt.t) + '. Amplía la franja de horas o agrégala en una sesión aparte.' });
+    else out.push({ kind: 'warn', text: u.name + ' no tiene horario posible' + (u.reasons.length ? ': ' + u.reasons.join('; ') : '') + '. Revisa su turno, sus breaks o los días elegidos.' });
+  });
+  // otra hora de inicio
+  const tried = [];
+  for (let t = BR_DAY_START; opts.winLo == null && t + dur <= BR_DAY_END; t += 30) {
+    if (t === opts.start) continue;
+    const p = brPlan(days, Object.assign({}, opts, { start: t, tol: 0 }));
+    tried.push({ t, placed: p.total - p.unplaced.length, sessions: p.sessions.length });
+  }
+  tried.sort((a, b) => b.placed - a.placed || a.sessions - b.sessions || Math.abs(a.t - opts.start) - Math.abs(b.t - opts.start));
+  const better = tried.filter(x => x.placed > placed || (x.placed === placed && x.sessions < plan.sessions.length)).slice(0, 2);
+  better.forEach(x => out.push({ kind: 'tip', text: 'Si todas las sesiones empiezan a las ' + fmt(x.t) + ', entran ' + x.placed + ' de ' + plan.total + ' en ' + x.sessions + ' ' + (x.sessions === 1 ? 'sesión' : 'sesiones') + ' (ahora: ' + placed + ' de ' + plan.total + ' en ' + plan.sessions.length + ').' }));
+  // reglas relajadas
+  const relaxed = plan.sessions.filter(x => (x.cap || 1) > 1);
+  if (relaxed.length) out.push({ kind: 'warn', text: relaxed.length + ' ' + (relaxed.length === 1 ? 'sesión usa' : 'sesiones usan') + ' la regla relajada (salen a la vez 2 o 3 de la misma cola o de Processing) para llegar al mínimo de ' + (opts.min || 1) + ': ' + joinN(relaxed.slice(0, 4).map(x => x.day.label + ' ' + fmt(x.start))) + (relaxed.length > 4 ? ' y ' + (relaxed.length - 4) + ' más' : '') + '. Revisa que haya cobertura en esos horarios.' });
+  if (!opts.flex && plan.unplaced.length && (opts.min || 1) > 1) {
+    const pf = brPlan(days, Object.assign({}, opts, { flex: true }));
+    const g = (pf.total - pf.unplaced.length) - placed;
+    if (g > 0) out.push({ kind: 'tip', text: 'Si permites relajar la regla de 1 por cola cuando haga falta, entran ' + (pf.total - pf.unplaced.length) + ' de ' + pf.total + ' (ahora ' + placed + ').' });
+  }
+  // ampliar la hora
+  if ((opts.tol != null || opts.winLo != null) && plan.unplaced.length) {
+    const pt = brPlan(days, Object.assign({}, opts, { tol: null, winLo: null, winHi: null, start2: null }));
+    const g2 = (pt.total - pt.unplaced.length) - placed;
+    if (g2 > 0) out.push({ kind: 'tip', text: 'Si la hora puede moverse a cualquier hora del día, entran ' + (pt.total - pt.unplaced.length) + ' de ' + pt.total + ' en ' + pt.sessions.length + ' ' + (pt.sessions.length === 1 ? 'sesión' : 'sesiones') + ' (ahora ' + placed + ').' });
+  }
+  // bajar el mínimo
+  if ((opts.min || 1) > 1 && plan.unplaced.length) {
+    const pm = brPlan(days, Object.assign({}, opts, { min: opts.min - 1 }));
+    const gain = (pm.total - pm.unplaced.length) - placed;
+    if (gain > 0) out.push({ kind: 'tip', text: 'Con un mínimo de ' + (opts.min - 1) + ' personas por sesión entran ' + (pm.total - pm.unplaced.length) + ' de ' + pm.total + ' (ahora ' + placed + ').' });
+  }
+  // partir la sesión en dos
+  if (dur >= 45 && plan.unplaced.length) {
+    const half = Math.max(15, Math.ceil(dur / 2 / 15) * 15);
+    const p2 = brPlan(days, Object.assign({}, opts, { dur: half }));
+    if (p2.unplaced.length < plan.unplaced.length) out.push({ kind: 'tip', text: 'Con sesiones de ' + half + ' min (dos partes) entran ' + (p2.total - p2.unplaced.length) + ' de ' + p2.total + '; con ' + dur + ' min entran ' + placed + '.' });
+  }
+  // tamaño de las sesiones
+  const sizes = plan.sessions.map(s => s.members.length), mx = sizes.length ? Math.max.apply(null, sizes) : 0;
+  if (plan.sessions.length > 1 && mx <= 3) out.push({ kind: 'tip', text: 'Cada sesión solo admite 1 persona por cola (Phones, Chats, Tickets, Casino) y 1 de Processing a la vez, por eso salen ' + plan.sessions.length + ' sesiones con máximo ' + mx + ' ' + (mx === 1 ? 'persona' : 'personas') + '. Mezclar áreas o colas en una misma sesión ayuda a que quepan más.' });
+  const singles = plan.sessions.filter(s => s.members.length === 1);
+  if ((opts.min || 1) <= 1 && singles.length && plan.sessions.length > singles.length) out.push({ kind: 'tip', text: singles.length + ' ' + (singles.length === 1 ? 'sesión queda' : 'sesiones quedan') + ' con una sola persona (' + singles.slice(0, 3).map(s => brFirst(s.members[0].rec.name) + ', ' + s.day.label).join('; ') + '). Si mueven algún break de ese día pueden juntarse con otra sesión.' });
+  // respaldo de tasks
+  const soft = [];
+  plan.sessions.forEach(s => s.members.forEach(m => m.soft.forEach(t => soft.push(s.day.label + ' ' + fmt(s.start) + ': ' + brFirst(m.rec.name) + ' sale y ' + t))));
+  if (soft.length) out.push({ kind: 'tip', text: 'Sin respaldo completo de tasks: ' + soft.slice(0, 3).join('; ') + (soft.length > 3 ? ' (y ' + (soft.length - 3) + ' más)' : '') + '.' });
+  // mover break que estorba
+  plan.unplaced.forEach(u => {
+    if (!u.rec || !u.reasons.some(x => /break/.test(x))) return;
+    out.push({ kind: 'tip', text: 'A ' + u.name + ' le estorba su break dentro de la ventana; si lo mueve para que empiece después de que termine el briefing, queda libre.' });
+  });
+  if (!out.length) out.push({ kind: 'ok', text: 'Todos entran en el horario pedido sin chocar con breaks, colas, Processing ni tasks. No hay nada que mejorar.' });
+  BR_OPTS = opts;
+  return out;
+}
+
+
+/* ---------- edición manual de personas ---------- */
+const brRecFor = (days, di, key) => days[di].recs.find(r => nt(r.name) === key && validShift(r)) || null;
+function brExtras(plan, skipKey) {
+  const by = {};
+  plan.sessions.forEach(s => s.members.forEach(m => {
+    if (skipKey && nt(m.rec.name) === skipKey) return;
+    (by[s.di] = by[s.di] || []).push({ rec: m.rec, s: s.start, e: s.end, why: 'briefing', sc: s.cap || 1 });
+  }));
+  return by;
+}
+function brFits(days, plan, si, key) {
+  if (plan.opts) BR_OPTS = plan.opts;
+  const s = plan.sessions[si], r = brRecFor(days, s.di, key);
+  if (!r) return { ok: false, none: true, reason: 'no trabaja ese día' };
+  return brCheck(days[s.di], r, s.start, s.end, brAways(days[s.di], brExtras(plan, key)[s.di]), s.cap || 1);
+}
+function brSessionOf(plan, key) {
+  for (let i = 0; i < plan.sessions.length; i++) if (plan.sessions[i].members.some(m => nt(m.rec.name) === key)) return i;
+  return -1;
+}
+function brDetach(plan, key) { plan.sessions.forEach(s => { s.members = s.members.filter(m => nt(m.rec.name) !== key); }); }
+function brValidate(days, plan, opts) {
+  BR_OPTS = opts;
+  const min = opts.min || 1, all = brExtras(plan);
+  plan.sessions.forEach(s => {
+    s.small = s.members.length < min;
+    s.members.forEach(m => {
+      const others = (all[s.di] || []).filter(x => x.rec !== m.rec);
+      const c = brCheck(days[s.di], m.rec, s.start, s.end, brAways(days[s.di], others), s.cap || 1);
+      m.warn = c.ok ? '' : c.reason; m.soft = c.ok ? (c.soft || []) : m.soft;
+    });
+  });
+}
+function brRefresh(days, plan, opts) {
+  BR_OPTS = opts;
+  plan.sessions.sort((a, b) => a.di - b.di || a.start - b.start);
+  brValidate(days, plan, opts);
+  const placed = new Set();
+  plan.sessions.forEach(s => s.members.forEach(m => placed.add(nt(m.rec.name))));
+  const per = brPick(days, opts), extra = brExtras(plan), starts = brStarts(opts.dur, opts), old = plan.unplaced || [], out = [];
+  plan.all.forEach((name, key) => {
+    if (placed.has(key)) return;
+    const prev = old.find(u => u.key === key);
+    const w = brWhy(days, opts, per, extra, key, name, starts);
+    out.push({ name, key, rec: w.rec || (prev && prev.rec) || null, reasons: prev ? prev.reasons : ['lo quitaste de su sesión'], alt: w.alt });
+  });
+  plan.unplaced = out;
+}
+function brAddMember(days, plan, opts, si, key) {
+  BR_OPTS = opts;
+  const s = plan.sessions[si]; if (!s) return { ok: false, msg: 'No encontré esa sesión.' };
+  const r = brRecFor(days, s.di, key); if (!r) return { ok: false, msg: 'Esa persona no trabaja ese día.' };
+  brDetach(plan, key);
+  if (opts.banned && opts.banned[key]) opts.banned[key] = opts.banned[key].filter(d => d !== s.di);
+  if (!s.members.some(m => m.rec === r)) s.members.push({ rec: r, soft: [], warn: '' });
+  brRefresh(days, plan, opts);
+  const m = s.members.find(x => x.rec === r);
+  return { ok: !(m && m.warn), msg: m && m.warn ? m.warn : '' };
+}
+/* al quitar a alguien de un día, se le busca otro día u horario donde sí quepa */
+function brPlaceMissing(days, plan, opts, onlyKey) {
+  BR_OPTS = opts; opts.banned = opts.banned || {};
+  const min = opts.min || 1;
+  // 1) sumarse a una sesión que ya existe en otro día u hora
+  plan.unplaced.slice().forEach(u => {
+    let best = null;
+    plan.sessions.forEach((s, si) => {
+      if ((opts.banned[u.key] || []).includes(s.di)) return;
+      if (!brFits(days, plan, si, u.key).ok) return;
+      const sc = [brDist(opts, s.start), s.di];
+      if (!best || sc[0] < best.sc[0] || (sc[0] === best.sc[0] && sc[1] < best.sc[1])) best = { si, sc };
+    });
+    if (best) {
+      const s = plan.sessions[best.si], r = brRecFor(days, s.di, u.key);
+      s.members.push({ rec: r, soft: [], warn: '' });
+      brRefresh(days, plan, opts);
+    }
+  });
+  // 2) con los que siguen sin lugar, armar sesiones nuevas (respeta el mínimo y los días descartados)
+  const rest = plan.unplaced.map(u => u.key);
+  if (rest.length && rest.length >= min) {
+    const sub = brPlan(days, Object.assign({}, opts, { names: rest, fixed: brExtras(plan) }));
+    sub.sessions.forEach(s => plan.sessions.push(s));
+  }
+  // 3) último recurso: si todavía no tiene lugar, se le abre una sesión aparte (queda marcada por tener menos del mínimo)
+  plan.unplaced.map(u => u.key).filter(k => k === onlyKey).forEach(key => {
+    if (brSessionOf(plan, key) >= 0) return;
+    let join = null;
+    plan.sessions.forEach((x, si) => {
+      if ((opts.banned[key] || []).includes(x.di) || !brFits(days, plan, si, key).ok) return;
+      const sc = brDist(opts, x.start);
+      if (!join || sc < join.sc) join = { si, sc };
+    });
+    if (join) { const x = plan.sessions[join.si]; x.members.push({ rec: brRecFor(days, x.di, key), soft: [], warn: '' }); return; }
+    const per = brPick(days, Object.assign({}, opts, { names: [key] }));
+    const ex = brExtras(plan);
+    let pick = null;
+    opts.dayIdx.forEach(di => {
+      const r = per[di] && per[di].find(y => nt(y.name) === key); if (!r) return;
+      const aw = brAways(days[di], ex[di]);
+      brStarts(opts.dur, opts).forEach(t => {
+        for (const cap of brCaps(opts)) {
+          const c = brCheck(days[di], r, t, t + opts.dur, aw, cap);
+          if (!c.ok) continue;
+          const sc = [cap, brDist(opts, t), di];
+          if (!pick || sc[0] < pick.sc[0] || (sc[0] === pick.sc[0] && (sc[1] < pick.sc[1] || (sc[1] === pick.sc[1] && sc[2] < pick.sc[2])))) pick = { di, t, r, cap, soft: c.soft || [], sc };
+          break;
+        }
+      });
+    });
+    if (pick) plan.sessions.push({ di: pick.di, day: days[pick.di], start: pick.t, end: pick.t + opts.dur, members: [{ rec: pick.r, soft: pick.soft, warn: '' }], cap: pick.cap });
+  });
+  BR_OPTS = opts;
+  brRefresh(days, plan, opts);
+}
+function brRemoveMember(days, plan, opts, key) {
+  BR_OPTS = opts; opts.banned = opts.banned || {};
+  const si = brSessionOf(plan, key), from = si >= 0 ? plan.sessions[si] : null;
+  if (from) { opts.banned[key] = opts.banned[key] || []; if (!opts.banned[key].includes(from.di)) opts.banned[key].push(from.di); }
+  brDetach(plan, key);
+  if (from && !from.members.length) plan.sessions.splice(plan.sessions.indexOf(from), 1);
+  plan.unplaced = (plan.unplaced || []).filter(u => u.key !== key);
+  brRefresh(days, plan, opts);
+  brPlaceMissing(days, plan, opts, key);
+  const ns = brSessionOf(plan, key);
+  if (ns >= 0) return { moved: true, session: plan.sessions[ns], from };
+  const u = plan.unplaced.find(x => x.key === key);
+  if (u && from) u.reasons = ['lo quitaste del ' + from.day.label + ' y no encontré otro día u horario donde quepa con el mínimo y las reglas'];
+  return { moved: false, from };
+}
+function brNewSession(days, plan, opts, di, start) {
+  const s = { di, day: days[di], start, end: start + opts.dur, members: [], cap: brCaps(opts).slice(-1)[0] };
+  plan.sessions.push(s); brRefresh(days, plan, opts); return s;
+}
+function brDeleteSession(days, plan, opts, si) {
+  const s = plan.sessions[si]; if (!s || s.members.length) return;
+  plan.sessions.splice(si, 1); brRefresh(days, plan, opts);
+}
+
 /* ---------- parche del xlsx (conserva formato) ---------- */
 function xmlUnesc(s) { return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&'); }
 function attr(tag, name) { const m = tag.match(new RegExp('\\b' + name + '="([^"]*)"')); return m ? xmlUnesc(m[1]) : null; }
+
+function xmlEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function colNum(l) { let n = 0; for (const ch of l) n = n * 26 + ch.charCodeAt(0) - 64; return n; }
+function insertCell(xml, addr, cellXml) {
+  const m = addr.match(/^([A-Z]+)(\d+)$/), cn = colNum(m[1]);
+  const re = new RegExp('(<row r="' + m[2] + '"[^>]*?)(/>|>([\\s\\S]*?)</row>)');
+  const rm = xml.match(re);
+  if (!rm) return null;
+  if (rm[2] === '/>') return xml.replace(re, () => rm[1] + '>' + cellXml + '</row>');
+  const inner = rm[3]; let pos = inner.length;
+  const rx = /<c r="([A-Z]+)\d+"/g; let mm;
+  while ((mm = rx.exec(inner))) { if (colNum(mm[1]) > cn) { pos = mm.index; break; } }
+  const ni = inner.slice(0, pos) + cellXml + inner.slice(pos);
+  return xml.replace(re, () => rm[1] + '>' + ni + '</row>');
+}
 
 async function patchXlsx(buf, edits) {
   const zip = await JSZip.loadAsync(buf);
@@ -532,11 +1513,16 @@ async function patchXlsx(buf, edits) {
     for (const e of list) {
       const re = new RegExp('<c r="' + e.addr + '"([^>]*?)(?:/>|>([\\s\\S]*?)</c>)');
       const m = xml.match(re);
-      if (!m) throw new Error('No encontré la celda ' + e.addr + ' en ' + sheet + '.');
-      const attrs = m[1].replace(/\s+t="[^"]*"/, '');
-      const f = m[2] ? (m[2].match(/<f[\s\S]*?<\/f>|<f[^>]*\/>/) || [''])[0] : '';
-      const repl = '<c r="' + e.addr + '"' + attrs + '>' + f + '<v>' + String(e.value) + '</v></c>';
-      xml = xml.replace(re, () => repl);
+      const attrs = m ? m[1].replace(/\s+t="[^"]*"/, '') : '';
+      let cellXml;
+      if (e.text !== undefined) {
+        cellXml = e.text === '' ? '<c r="' + e.addr + '"' + attrs + '/>' : '<c r="' + e.addr + '"' + attrs + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(e.text) + '</t></is></c>';
+      } else {
+        const f = m && m[2] ? (m[2].match(/<f[\s\S]*?<\/f>|<f[^>]*\/>/) || [''])[0] : '';
+        cellXml = '<c r="' + e.addr + '"' + attrs + '>' + f + '<v>' + String(e.value) + '</v></c>';
+      }
+      if (m) xml = xml.replace(re, () => cellXml);
+      else { const nx = insertCell(xml, e.addr, cellXml); if (!nx) throw new Error('No encontré dónde poner la celda ' + e.addr + ' en ' + sheet + '.'); xml = nx; }
       patched++;
     }
     zip.file(p, xml);
@@ -551,6 +1537,8 @@ function collectEdits(days) {
     if (r.end !== r.oe && r.end != null) edits.push({ sheet: d.sheetName, addr: r.ae, value: r.end / 1440 });
     if (r.b1 !== r.o1 && r.b1 != null) edits.push({ sheet: d.sheetName, addr: r.a1, value: r.b1 / 1440 });
     if (r.b2 !== r.o2 && r.b2 != null) edits.push({ sheet: d.sheetName, addr: r.a2, value: r.b2 / 1440 });
+    if (r.task !== r.ot) edits.push({ sheet: d.sheetName, addr: r.at, text: r.task });
+    if (r.queue !== r.oq) edits.push({ sheet: d.sheetName, addr: r.aq, text: r.queue });
   }));
   return edits;
 }
@@ -578,7 +1566,667 @@ const dayOfRec = r => S.days.find(d => d.recs.includes(r));
 const joinNames = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1];
 const overflowAt = (recs, s) => recs.filter(r => r.queue === 'Overflow' && r.start <= s && s < r.end && !['b1','b2'].some(k => r[k] != null && r[k] < s + STEP && r[k] + CFG.dur > s)).length;
 
-function isActive(i){ return i.type === 'queue' || i.type === 'task' || (i.type === 'cover' && (i.kind === 'thin' || i.kind === 'empty')); }
+function isActive(i){ return (i.type === 'assign' && !i.soft) || i.type === 'queue' || i.type === 'task' || i.type === 'area' || (i.type === 'cover' && (i.kind === 'thin' || i.kind === 'empty')); }
+
+/* ---------- BRIEFING CREATOR ---------- */
+const BR_AREAS = [['Tier 3', 'Tier 3'], ['Senior', 'Senior'], ['Tier 2', 'Tier 2'], ['Tier 1', 'Tier 1'], ['Processing', 'Processing'], ['Decline', 'Decline'], ['Third Party', 'Third Party'], ['Vip', 'VIP'], ['Training', 'Training'], ['New Hire', 'New Hire'], ['Workforce', 'Workforce']];
+const BR_TOL = [['0', 'Exacta'], ['60', 'Hasta 1 h antes o después'], ['120', 'Hasta 2 h antes o después'], ['240', 'Hasta 4 h antes o después'], ['all', 'Cualquier hora del día']];
+const BR_DUR = [15, 30, 45, 60, 90, 120];
+const BR_MIN = [1, 2, 3, 4, 5];
+const B_STEPS = ['Nombre', 'Área', 'Duración y hora', 'Excel', 'Clerks y días', 'Propuesta'];
+const DAYC = ['var(--phones)', 'var(--chats)', 'var(--casino)', 'var(--tickets)', 'var(--info)', 'var(--other)', 'var(--bad)'];
+const CHECK = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const DECO = '<div class="deco" aria-hidden="true"><i style="--q:var(--phones)">10:00</i><i style="--q:var(--chats)">10:30</i><i style="--q:var(--casino)">11:00</i></div>';
+const B = { step: 1, title: '', areas: [], dur: 30, start: 600, start2: 840, mode: 'both', winFrom: 840, winTo: 1320, min: 3, flex: true, spread: true, tolKey: '120', fname: '', days: [], dayOn: [], people: [], plan: null, opts: null, recs: [], approved: false, edit: false, err: '', impMsg: '' };
+const bTol = () => B.tolKey === 'all' ? null : +B.tolKey;
+const bTolText = () => (BR_TOL.find(x => x[0] === B.tolKey) || BR_TOL[2])[1].toLowerCase();
+const bQcol = q => ({ Phones: 'var(--phones)', Chats: 'var(--chats)', Tickets: 'var(--tickets)', Casino: 'var(--casino)' }[q] || 'var(--other)');
+const bDayName = d => d.label + ' ' + d.dom;
+const BR_MODES = [['both', 'Mañana y tarde'], ['am', 'Toda la mañana'], ['pm', 'Toda la tarde'], ['custom', 'Rango propio'], ['margin', 'Hora fija con margen']];
+function bWin(){
+  if (B.mode === 'am') return { lo: B.start, hi: 840 };
+  if (B.mode === 'pm') return { lo: B.start, hi: 1380 };
+  if (B.mode === 'both') return { lo: B.start, hi: 1380 };
+  if (B.mode === 'custom') return { lo: B.winFrom, hi: B.winTo };
+  return null;
+}
+function bTimeOk(){
+  const w = bWin(); if (!w) return true;
+  return w.lo >= 360 && w.hi <= 1380 && w.hi - w.lo >= B.dur;
+}
+function bWhenText(){
+  const w = bWin();
+  if (B.mode === 'both') return 'mañana a partir de las ' + fmt(B.start) + ' y tarde a partir de las ' + fmt(B.start2);
+  if (B.mode === 'am') return 'en la mañana, a partir de las ' + fmt(w.lo) + ' y hasta las ' + fmt(w.hi);
+  if (B.mode === 'pm') return 'en la tarde, a partir de las ' + fmt(w.lo) + ' y hasta las ' + fmt(w.hi);
+  if (B.mode === 'custom') return 'entre las ' + fmt(w.lo) + ' y las ' + fmt(w.hi);
+  return 'desde las ' + fmt(B.start) + ' (' + bTolText() + ')';
+}
+function bTimeIn(id, label, val, key){ return '<div class="bfield"><label for="' + id + '">' + label + '</label><input class="binput small" type="time" id="' + id + '" data-b="' + key + '" value="' + fmt24(val) + '" step="900"></div>'; }
+function bWhenHTML(){
+  let f = '';
+  if (B.mode === 'both') f = bTimeIn('b-start', 'Mañana: empezar a partir de las', B.start, 'start') + bTimeIn('b-start2', 'Tarde: empezar a partir de las', B.start2, 'start2');
+  else if (B.mode === 'custom') f = bTimeIn('b-wfrom', 'Desde las', B.winFrom, 'wfrom') + bTimeIn('b-wto', 'Hasta las', B.winTo, 'wto');
+  else if (B.mode === 'margin') f = bTimeIn('b-start', 'Hora a la que quieres empezar', B.start, 'start') + '<div class="bfield"><label for="b-tol">Qué tanto puede moverse</label><select class="binput small" id="b-tol" data-b="tol">' + BR_TOL.map(x => '<option value="' + x[0] + '"' + (B.tolKey === x[0] ? ' selected' : '') + '>' + x[1] + '</option>').join('') + '</select></div>';
+  else f = bTimeIn('b-start', 'Empezar a partir de las', B.start, 'start');
+  const hint = { both: 'Ninguna sesión empieza antes de esas horas. Los trainings siguen durante toda la tarde, así entran también los que trabajan en la tarde.', am: 'Ninguna sesión empieza antes de esa hora y todas terminan antes de las 2:00 pm.', pm: 'Ninguna sesión empieza antes de esa hora y los trainings siguen durante toda la tarde.', custom: 'Los trainings se ponen solo dentro de ese rango.', margin: 'Una sola hora de inicio, que se mueve un poco si así caben más personas.' }[B.mode];
+  const spread = B.mode === 'margin' ? '' : '<div class="bfield"><label>Cómo repartirlos</label><div class="bchips"><button class="bchip" aria-pressed="' + B.spread + '" data-act="b-spread" data-v="1">Uno tras otro durante toda la franja</button><button class="bchip" aria-pressed="' + !B.spread + '" data-act="b-spread" data-v="0">Lo más cerca de la hora de inicio</button></div><p class="bhint tight">' + (B.spread ? 'Las sesiones van avanzando cada hora y media aproximadamente, sin dar saltos grandes.' : 'Las sesiones se juntan lo más cerca posible de la hora de inicio.') + '</p></div>';
+  return '<div class="bfield"><label>¿Cuándo se dan los trainings?</label><div class="bchips">' + BR_MODES.map(x => '<button class="bchip" aria-pressed="' + (B.mode === x[0]) + '" data-act="b-mode" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div><p class="bhint tight">' + hint + ' Nunca se pone en la primera ni en la última hora del turno de cada persona.</p></div><div class="bgrid2">' + f + '</div>' + spread;
+}
+/* motivo en lenguaje sencillo para las personas que faltan */
+function bWhyText(u){
+  const out = []; let turno = 0;
+  (u.reasons || []).forEach(r => {
+    if (/^sí cabe solo/.test(r)) out.push('Puede asistir, pero no hay otras personas que quepan a la misma hora respetando las reglas (1 por cola y 1 de Processing)');
+    else if (/no cubre ese horario/.test(r)) turno++;
+    else out.push(r.charAt(0).toUpperCase() + r.slice(1));
+  });
+  if (turno) out.push(turno > 1 ? 'En los días elegidos su turno no coincide con el horario del training' : 'Su turno no coincide con el horario del training');
+  return Array.from(new Set(out)).join('. ') || 'Sin hueco';
+}
+const bSessLabel = s => (SHORT[s.day.label] || s.day.label) + ' ' + s.day.dom + ', ' + fmt(s.start);
+const bIni = n => String(n).split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+function bMax(){
+  let m = 1;
+  if (B.title.trim()){ m = 2; if (B.areas.length){ m = 3; if (B.dur >= 5 && B.start != null && bTimeOk()){ m = 4; if (B.days.length && B.people.length){ m = 5; if (B.plan) m = 6; } } } }
+  return m;
+}
+
+function bBuildPeople(){
+  const want = new Set(B.areas.map(nt)), map = new Map();
+  B.days.forEach((d, di) => d.recs.forEach(r => {
+    if (!want.has(nt(r.area)) || !validShift(r)) return;
+    const k = nt(r.name);
+    if (!map.has(k)) map.set(k, { key: k, name: r.name, area: r.area, queue: r.queue, task: '', days: [], on: true });
+    const p = map.get(k);
+    if (!p.days.includes(di)) p.days.push(di);
+    if (!p.task && mainText(r)) p.task = mainText(r);
+  }));
+  B.people = Array.from(map.values()).sort((a, b) => a.area.localeCompare(b.area) || a.name.localeCompare(b.name));
+  B.dayOn = B.days.map((d, di) => B.people.some(p => p.days.includes(di)));
+}
+
+async function bLoad(file){
+  B.err = '';
+  try{
+    if (!/\.xlsx$/i.test(file.name)) throw new Error('Necesito un archivo .xlsx. Si es .xlsm o .xls, guarda una copia como .xlsx y súbela.');
+    const buf = await file.arrayBuffer();
+    const out = parseWorkbook(XLSX.read(buf, { type: 'array' }));
+    if (!out.days.length) throw new Error('No encontré hojas con la tabla de breaks (la fila con “Break 1”). ¿Es el archivo de Tasks del día?');
+    B.days = out.days; B.fname = file.name; B.plan = null; B.approved = false;
+    bBuildPeople();
+    if (!B.people.length){
+      const found = Array.from(new Set([].concat.apply([], B.days.map(d => d.recs.map(r => r.area))))).filter(Boolean).sort();
+      throw new Error('No encontré personas de ' + B.areas.join(', ') + ' en ese archivo. Áreas que sí aparecen: ' + found.join(', ') + '.');
+    }
+    B.step = 5;
+  }catch(e){ B.err = e && e.message ? e.message : 'No pude leer el archivo.'; B.step = 4; }
+  render();
+}
+
+function bAnalyze(){
+  const names = B.people.filter(p => p.on).map(p => p.key);
+  const dayIdx = B.dayOn.map((on, i) => on ? i : -1).filter(i => i >= 0);
+  if (!names.length || !dayIdx.length){ toast('Elige al menos una persona y un día.'); return; }
+  const w = bWin();
+  B.opts = { dur: B.dur, start: B.mode === 'custom' ? B.winFrom : B.start, start2: B.mode === 'both' ? B.start2 : null, winLo: w ? w.lo : null, winHi: w ? w.hi : null, tol: bTol(), min: B.min, flex: B.flex, spread: B.spread && B.mode !== 'margin', dayIdx, banned: {}, names, areas: B.areas.map(nt) };
+  B.plan = brPlanBest(B.days, B.opts, 900);
+  brValidate(B.days, B.plan, B.opts);
+  B.recs = brRecommend(B.days, B.opts, B.plan);
+  B.approved = false; B.edit = false; B.step = 6; render();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- pantallas ---------- */
+function bNavHTML(nextLabel, canNext, back){
+  return '<div class="bnav">' + (back ? '<button class="btn" data-act="b-back">Atrás</button>' : '') + '<button class="btn primary" data-act="b-next" id="b-next"' + (canNext ? '' : ' disabled') + '>' + nextLabel + '</button></div>';
+}
+function bPreview(){
+  const t = bWhenText();
+  return 'Cada sesión dura ' + B.dur + ' min, con mínimo ' + B.min + ' ' + pl(B.min, 'persona', 'personas') + '. ' + t.charAt(0).toUpperCase() + t.slice(1) + '. Nunca en la primera ni en la última hora del turno de cada persona.' + (bTimeOk() ? '' : ' El rango tiene que caber entre las 6:00 am y las 11:00 pm y alcanzar para la duración.');
+}
+function bStepHTML(){
+  if (B.step === 1) return '<section class="bstep" data-n="01">' + DECO + '<h2>¿Cómo se llama el briefing?</h2><p class="bhint">Es el título que va a salir en el PDF y en el Excel.</p>' +
+    '<input class="binput" id="b-title" data-b="title" value="' + esc(B.title) + '" placeholder="Por ejemplo: Cambios en Bonuses" maxlength="80" autocomplete="off">' + bNavHTML('Siguiente', !!B.title.trim(), false) + '</section>';
+  if (B.step === 2){
+    const custom = B.areas.filter(a => !BR_AREAS.some(x => x[0] === a));
+    return '<section class="bstep" data-n="02">' + DECO + '<h2>¿Qué área recibe el briefing?</h2><p class="bhint">Puedes elegir más de una. Usa el nombre tal como aparece en la columna Area del Excel.</p><div class="bchips">' +
+      BR_AREAS.concat(custom.map(a => [a, a])).map(x => '<button class="bchip" aria-pressed="' + B.areas.includes(x[0]) + '" data-act="b-area" data-v="' + esc(x[0]) + '">' + esc(x[1]) + '</button>').join('') +
+      '</div><div class="bcustom"><input class="binput small" id="b-custom" placeholder="Otra área" autocomplete="off"><button class="btn" data-act="b-addarea">Agregar</button></div>' + bNavHTML('Siguiente', B.areas.length > 0, true) + '</section>';
+  }
+  if (B.step === 3) return '<section class="bstep" data-n="03">' + DECO + '<h2>¿Cuánto dura y a qué hora empieza?</h2><p class="bhint">Después reviso turnos, breaks, colas y tasks para encontrar la mejor hora.</p>' +
+    '<div class="bfield"><label>Duración</label><div class="bchips">' + BR_DUR.map(m => '<button class="bchip" aria-pressed="' + (B.dur === m) + '" data-act="b-dur" data-v="' + m + '">' + m + ' min</button>').join('') + '<span class="bother"><input class="binput small num" type="number" min="5" max="240" step="5" id="b-dur" data-b="dur" value="' + B.dur + '" aria-label="Otra duración en minutos"> min</span></div></div>' +
+    bWhenHTML() +
+    '<div class="bfield"><label>Mínimo de personas por sesión</label><div class="bchips">' + BR_MIN.map(m => '<button class="bchip" aria-pressed="' + (B.min === m) + '" data-act="b-min" data-v="' + m + '">' + m + '</button>').join('') + '</div></div>' +
+    '<div class="bfield"><label>Regla de 1 por cola y 1 de Processing fuera a la vez</label><div class="bchips"><button class="bchip" aria-pressed="' + B.flex + '" data-act="b-flex" data-v="1">Flexible, la relajo solo si hace falta</button><button class="bchip" aria-pressed="' + !B.flex + '" data-act="b-flex" data-v="0">Estricta, nunca la rompo</button></div>' +
+    '<p class="bhint tight">Con mínimo ' + B.min + ', una cola o Processing puede no dar para tantas personas a la vez. En flexible empiezo estricto y solo permito 2 o 3 de la misma cola cuando es la única forma de llegar al mínimo; esas sesiones salen marcadas.</p></div>' +
+    '<p class="bprev" id="b-prev">' + esc(bPreview()) + '</p>' + bNavHTML('Siguiente', B.dur >= 5 && B.start != null && bTimeOk(), true) + '</section>';
+  if (B.step === 4){
+    const have = B.days.length && B.people.length;
+    return '<section class="bstep" data-n="04">' + DECO + '<h2>Sube el Excel de Tasks</h2><p class="bhint">El mismo formato de siempre: una hoja por día, con Queue (Main Task), Task (Secondary Task) y los breaks.</p>' +
+      '<div class="drop" id="bdrop"><div><strong>Arrastra aquí el archivo .xlsx</strong><span>' + (B.fname ? 'Cargado antes: ' + esc(B.fname) : 'Hojas tipo “Monday 16”, “Tuesday 17”…') + '</span></div><button class="btn primary" id="bpick" type="button">Elegir archivo</button></div>' +
+      '<div class="err" id="berr" role="alert">' + esc(B.err) + '</div><p class="privacy">El archivo se lee en tu navegador; no se envía a ningún servidor.</p>' +
+      '<div class="bnav"><button class="btn" data-act="b-back">Atrás</button>' + (have ? '<button class="btn primary" data-act="b-next">Usar el archivo cargado</button>' : '') + '</div></section>';
+  }
+  if (B.step === 5){
+    const areas = Array.from(new Set(B.people.map(p => p.area)));
+    const rows = areas.map(a => {
+      const list = B.people.filter(p => p.area === a), allOn = list.every(p => p.on);
+      return '<div class="pgroup"><div class="phead"><h3>' + esc(a) + '</h3><button class="btn small ghost" data-act="b-area-all" data-a="' + esc(a) + '" data-on="' + (allOn ? '0' : '1') + '">' + (allOn ? 'Quitar todos' : 'Elegir todos') + '</button></div>' +
+        list.map(p => '<label class="prow"><input type="checkbox" data-act="b-person" data-k="' + esc(p.key) + '"' + (p.on ? ' checked' : '') + '><span class="av" style="--q:' + bQcol(p.queue) + '">' + esc(bIni(p.name)) + '</span><span class="pname">' + esc(p.name) + '</span><span class="pq" style="--q:' + bQcol(p.queue) + '">' + esc(p.queue || 'sin cola') + '</span><span class="ptask">' + esc(p.task || 'sin task') + '</span><span class="pdays">' + p.days.map(i => SHORT[B.days[i].label] || B.days[i].label).join(' ') + '</span></label>').join('') + '</div>';
+    }).join('');
+    const nOn = B.people.filter(p => p.on).length, dOn = B.dayOn.filter(Boolean).length;
+    return '<section class="bstep" data-n="05"><h2>¿Con quiénes y en qué días?</h2><p class="bhint">Marqué a todos los de ' + esc(B.areas.join(', ')) + '. Quita a quien no deba asistir. Cada persona asiste una sola vez en la semana.</p>' +
+      '<div class="bfield"><label>Días disponibles</label><div class="bchips">' + B.days.map((d, i) => '<button class="bchip" aria-pressed="' + B.dayOn[i] + '" data-act="b-day" data-i="' + i + '">' + esc(SHORT[d.label] || d.label) + ' ' + esc(d.dom) + '</button>').join('') + '</div></div>' +
+      '<div class="pimport"><b>¿Es el seguimiento de un training anterior?</b><p class="bhint tight">Elige solo a los que faltaron: sube el Excel que descargaste del briefing anterior (lee su hoja “Faltan”) o pega los nombres, uno por línea.</p><div class="pimpr"><button class="btn small" data-act="b-import">Subir Excel del briefing anterior</button></div><textarea class="bsel bpaste" id="b-paste" rows="3" placeholder="Un nombre por línea" aria-label="Nombres de las personas que faltan"></textarea><button class="btn small" data-act="b-paste-apply">Elegir solo a estos nombres</button>' + (B.impMsg ? '<p class="bimsg">' + esc(B.impMsg) + '</p>' : '') + '</div>' +
+      '<div class="plist">' + rows + '</div><div class="bnav"><button class="btn" data-act="b-back">Atrás</button><span class="bcount">' + nOn + ' ' + pl(nOn, 'persona', 'personas') + ' y ' + dOn + ' ' + pl(dOn, 'día', 'días') + '</span><button class="btn primary" data-act="b-analyze"' + (nOn && dOn ? '' : ' disabled') + '>Analizar y armar sesiones</button></div></section>';
+  }
+  return bResultHTML();
+}
+
+/* ---------- resultado ---------- */
+function bLive(){
+  const P = B.plan, out = [];
+  P.sessions.forEach(s => {
+    if (s.small) out.push(bSessLabel(s) + ': solo ' + s.members.length + ' ' + pl(s.members.length, 'persona', 'personas') + ' (el mínimo es ' + B.min + ').');
+    s.members.forEach(m => { if (m.warn) out.push(m.rec.name + ' (' + bSessLabel(s) + '): ' + m.warn + '.'); });
+  });
+  return out;
+}
+function bSessHTML(s, si, idx){
+  const P = B.plan, dc = DAYC[s.di % DAYC.length];
+  const left = Math.max(0, (s.start - 360) / 1020 * 100), wid = Math.max(2.5, (s.end - s.start) / 1020 * 100);
+  const badges = (s.members.length < B.min ? '<span class="sbadge bad">Menos de ' + B.min + ' personas</span>' : '') +
+    ((s.cap || 1) > 1 ? '<span class="sbadge warn">Regla relajada, hasta ' + s.cap + ' de la misma cola fuera a la vez</span>' : '');
+  const lis = s.members.map(m => {
+    const r = m.rec, key = nt(r.name), br = [r.b1, r.b2].filter(x => x != null).map(fmt).join(' y ');
+    let ctl = '';
+    if (B.edit){
+      const mv = P.sessions.map((x, xi) => { if (xi === si) return ''; const f = brFits(B.days, P, xi, key); return f.none ? '' : '<option value="' + xi + '">' + esc(bSessLabel(x)) + (f.ok ? '' : ' (choca)') + '</option>'; }).join('');
+      ctl = '<span class="sctl"><select class="bsel" data-b="move" data-k="' + esc(key) + '" aria-label="Mover a otra sesión"><option value="">Mover a…</option>' + mv + '</select><button class="btn small ghost" data-act="b-rm" data-k="' + esc(key) + '">Quitar y re-agendar</button></span>';
+    }
+    return '<li><span class="av" style="--q:' + bQcol(r.queue) + '">' + esc(bIni(r.name)) + '</span><span class="sinfo"><span class="sn">' + esc(r.name) + '</span><span class="sm">' + esc(r.area) + ', ' + esc(mainText(r) || 'sin task') + (br ? ', breaks ' + esc(br) : '') + '</span></span><span class="pq" style="--q:' + bQcol(r.queue) + '">' + esc(r.queue || 'sin cola') + '</span>' +
+      (m.warn ? '<span class="sw bad">' + esc(m.warn) + '</span>' : (m.soft && m.soft.length ? '<span class="sw">' + esc(m.soft[0]) + '</span>' : '')) + ctl + '</li>';
+  }).join('') || '<li class="sempty">Sin personas todavía. Agrega a alguien con el selector de abajo.</li>';
+  let add = '';
+  if (B.edit){
+    const cands = B.people.filter(p => p.on && !s.members.some(m => nt(m.rec.name) === p.key)).map(p => ({ p, f: brFits(B.days, P, si, p.key), cur: brSessionOf(P, p.key) })).filter(x => !x.f.none);
+    add = '<div class="sadd"><select class="bsel" data-b="add" data-si="' + si + '" aria-label="Agregar persona a esta sesión"><option value="">Agregar persona…</option>' +
+      cands.map(x => '<option value="' + esc(x.p.key) + '">' + esc(x.p.name) + (x.cur >= 0 ? ' (hoy en ' + esc(bSessLabel(P.sessions[x.cur])) + ')' : ' (sin horario)') + (x.f.ok ? '' : ', choca') + '</option>').join('') + '</select>' +
+      (s.members.length ? '' : '<button class="btn small ghost" data-act="b-delsess" data-si="' + si + '">Quitar sesión</button>') + '</div>';
+  }
+  return '<article class="bsess" style="--dc:' + dc + ';--i:' + idx + '"><div class="stime"><b>' + fmt(s.start) + '</b><span>a ' + fmt(s.end) + '</span><em>' + (s.end - s.start) + ' min</em></div><div class="sbody"><div class="smini" aria-hidden="true"><i style="left:' + left + '%;width:' + wid + '%"></i></div>' +
+    (badges ? '<div class="sbadges">' + badges + '</div>' : '') + '<ul class="satt">' + lis + '</ul>' + add + '</div></article>';
+}
+function bResultHTML(){
+  const P = B.plan, placed = P.sessions.reduce((n, s) => n + s.members.length, 0), pct = P.total ? Math.round(placed / P.total * 100) : 0;
+  const sum = 'Entran ' + placed + ' de ' + P.total + ' ' + pl(P.total, 'persona', 'personas') + ' en ' + P.sessions.length + ' ' + pl(P.sessions.length, 'sesión', 'sesiones') + ' de ' + B.dur + ' min.' + (P.unplaced.length ? ' Faltan ' + P.unplaced.length + ' sin horario.' : ' Todos tienen horario.');
+  const byDay = {};
+  P.sessions.forEach((s, si) => { (byDay[s.di] = byDay[s.di] || []).push([s, si]); });
+  let idx = 0;
+  const days = Object.keys(byDay).map(Number).sort((a, b) => a - b).map(di =>
+    '<div class="bday" style="--dc:' + DAYC[di % DAYC.length] + '"><h3><i></i>' + esc(bDayName(B.days[di])) + '</h3><div class="dstrip" aria-hidden="true"><span class="dsm">Mañana</span><span class="dst">Tarde</span>' + byDay[di].map(x => '<i style="left:' + ((x[0].start - 360) / 1020 * 100) + '%;width:' + Math.max(1.6, (x[0].end - x[0].start) / 1020 * 100) + '%"></i>').join('') + '</div>' + byDay[di].map(x => bSessHTML(x[0], x[1], idx++)).join('') + '</div>').join('');
+  let newForm = '';
+  if (B.edit){
+    const dopts = B.days.map((d, i) => B.dayOn[i] ? '<option value="' + i + '">' + esc(bDayName(d)) + '</option>' : '').join('');
+    newForm = '<div class="bnew"><b>Nueva sesión</b><select class="bsel" id="b-newday" aria-label="Día">' + dopts + '</select><input class="bsel" type="time" id="b-newtime" value="' + fmt24(B.start) + '" step="900" aria-label="Hora de inicio"><button class="btn small" data-act="b-newsess">Crear sesión vacía</button></div>';
+  }
+  const un = P.unplaced.length ? '<div class="bun bfalta"><h3>Personas que faltan por agendar (' + P.unplaced.length + ')</h3><ul>' + P.unplaced.map(u => {
+    let ctl = '';
+    if (B.edit){
+      const opts = P.sessions.map((x, xi) => { const f = brFits(B.days, P, xi, u.key); return f.none ? '' : '<option value="' + xi + '">' + esc(bSessLabel(x)) + (f.ok ? '' : ' (choca)') + '</option>'; }).join('');
+      ctl = '<span class="sctl"><select class="bsel" data-b="assign" data-k="' + esc(u.key) + '" aria-label="Asignar a una sesión"><option value="">Asignar a…</option>' + opts + '</select></span>';
+    }
+    return '<li><span><b>' + esc(u.name) + '</b>' + (u.rec ? ' <span class="pq" style="--q:' + bQcol(u.rec.queue) + '">' + esc(u.rec.queue || 'sin cola') + '</span> <span class="sm">' + esc(u.rec.area) + '</span>' : '') + '<br>' + esc(bWhyText(u)) + (u.alt ? '. Podría el ' + esc(B.days[u.alt.di].label) + ' a las ' + fmt(u.alt.t) + '.' : '.') + '</span>' + ctl + '</li>';
+  }).join('') + '</ul><div class="bfoot"><button class="btn primary" data-act="b-again">Agendar otro training solo con ellos</button><span class="bhint tight">Deja marcadas únicamente a estas personas para el siguiente training. También quedan en la hoja “Faltan” del Excel.</span></div></div>' : '<div class="bun bokbox"><h3>Nadie falta</h3><p>Todas las personas elegidas tienen horario.</p></div>';
+  const live = bLive();
+  const warns = live.length ? '<div class="bun warnbox"><h3>Avisos de las sesiones</h3><ul>' + live.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' : '';
+  const recs = '<div class="brecs"><h3>Recomendaciones</h3><ul>' + B.recs.map(r => '<li class="' + r.kind + '"><span class="rd"></span><span>' + esc(r.text) + '</span></li>').join('') + '</ul></div>';
+  const relaxed = P.sessions.filter(s => (s.cap || 1) > 1).length;
+  return '<section class="bres"><div class="bhero"><div class="bhtop"><div><h2>' + esc(B.title) + '</h2><p class="bsub">' + esc(B.areas.join(', ')) + ', ' + B.dur + ' min, ' + esc(bWhenText()) + ', mínimo ' + B.min + '</p></div><span class="bbadge ' + (B.approved ? 'ok' : 'wait') + '">' + (B.approved ? 'Aprobado' : 'Pendiente de aprobación') + '</span></div>' +
+    '<div class="bmeter" role="img" aria-label="' + pct + '% con horario"><i style="width:' + pct + '%"></i></div><p class="bsum">' + esc(sum) + '</p>' +
+    '<div class="bflags">' + (B.edit ? '<span class="sbadge warn">Modo edición activo</span>' : '') + (relaxed ? '<span class="sbadge warn">' + relaxed + ' ' + pl(relaxed, 'sesión', 'sesiones') + ' con regla relajada</span>' : '') + '</div></div>' +
+    (days || '<p class="bhint">No se pudo armar ninguna sesión con estos datos. Mira las recomendaciones.</p>') + newForm + warns + recs + un + '</section>';
+}
+function bBarHTML(){
+  if (B.step !== 6) return '';
+  const nw = bLive().length;
+  const dl = S.dl === null ? '<span style="font-size:13px;color:var(--bad)">Este visor no permite descargar archivos; abre la página en claude.ai.</span>' :
+    '<button class="btn" data-act="b-pdf">Descargar PDF</button><button class="btn primary" data-act="b-xlsx">Descargar Excel</button>';
+  return '<div class="exportBar"><div class="msg"><b>' + (B.approved ? 'Briefing aprobado' : 'Listo para aprobar') + '</b> ' + (nw ? 'Ojo: hay ' + nw + ' ' + pl(nw, 'aviso', 'avisos') + ' en las sesiones.' : (B.approved ? 'Ya puedes descargarlo con el sello de aprobado.' : 'Revísalo y apruébalo; el PDF y el Excel llevan el estado.')) + '</div>' +
+    '<button class="btn" data-act="b-edit-toggle" aria-pressed="' + B.edit + '">' + (B.edit ? 'Terminar edición' : 'Editar personas') + '</button><button class="btn" data-act="b-edit">Cambiar datos</button><button class="btn ' + (B.approved ? '' : 'apply') + '" data-act="b-approve">' + (B.approved ? 'Quitar aprobación' : 'Aprobar') + '</button>' + dl + '</div>';
+}
+
+function renderBriefing(){
+  $('#tools').hidden = true;
+  const max = bMax();
+  const rail = '<nav class="rail" aria-label="Pasos">' + B_STEPS.map((s, i) => {
+    const n = i + 1, cur = B.step === n, done = n < B.step && n <= max;
+    return '<button class="rs' + (done ? ' done' : '') + '" data-act="b-go" data-s="' + n + '"' + (cur ? ' aria-current="step"' : '') + (n > max ? ' disabled' : '') + '><i>' + (done ? CHECK : n) + '</i>' + s + '</button>';
+  }).join('') + '</nav>';
+  const sy = window.scrollY;
+  app.innerHTML = '<div class="bw">' + rail + '<div class="bmain">' + bStepHTML() + '</div></div>' + bBarHTML();
+  if (B.step === 6) window.scrollTo(0, sy);
+  if (B.step === 4){
+    const drop = $('#bdrop'); if (!drop) return;
+    ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+    $('#bpick').addEventListener('click', () => $('#bfile').click());
+  }
+}
+
+/* ---------- descargas ---------- */
+const bFileBase = () => (B.title.trim() || 'Briefing').replace(/[^\w\- áéíóúñÁÉÍÓÚÑ]+/g, '').trim().slice(0, 60) || 'Briefing';
+const pdfT = s => String(s == null ? '' : s).replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/→/g, '->').replace(/…/g, '...');
+function bAttRows(){
+  const rows = [];
+  B.plan.sessions.forEach(s => s.members.forEach(m => rows.push({ s, r: m.rec, soft: m.soft || [], warn: m.warn })));
+  return rows;
+}
+/* ---------- Excel con formato ---------- */
+const XL_INK = 'FF101B33', XL_BLUE = 'FF2F5BEA', XL_MUT = 'FF566280', XL_LINE = 'FFD4DAE6', XL_SOFT = 'FFF4F6FA';
+const XL_DAY = ['FF2F5BEA', 'FF0A7F64', 'FFA82B7C', 'FFA36405', 'FF3F5BA9', 'FF5F6A8A', 'FFD3263A'];
+const XL_Q = { Phones: 'FF2F5BEA', Chats: 'FF0A7F64', Tickets: 'FFA36405', Casino: 'FFA82B7C' };
+function xlTint(h, k){
+  const c = [2, 4, 6].map(i => parseInt(h.slice(i, i + 2), 16));
+  return 'FF' + c.map(v => Math.round(v + (255 - v) * k).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+async function bXlsx(){
+  if (!S.dl) return;
+  if (!window.ExcelJS) return bXlsxPlain();
+  try{
+    const P = B.plan, placed = P.sessions.reduce((n, s) => n + s.members.length, 0);
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Revisor de breaks'; wb.created = new Date();
+    const thin = { style: 'thin', color: { argb: XL_LINE } }, box = { top: thin, left: thin, bottom: thin, right: thin };
+    const fill = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+    const font = (o) => Object.assign({ name: 'Calibri', size: 11, color: { argb: XL_INK } }, o || {});
+    const lines = (txt, chars) => String(txt || '').split('\n').reduce((n, l) => n + Math.max(1, Math.ceil(l.length / chars)), 0);
+    const setup = ws => { ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9, margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 } }; };
+    const headRow = (ws, r, labels, argb) => {
+      const row = ws.getRow(r); row.height = 26;
+      labels.forEach((t, i) => { const c = row.getCell(i + 1); c.value = t; c.font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); c.fill = fill(argb || XL_INK); c.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 }; c.border = box; });
+    };
+
+    /* ===== Hoja 1: Resumen ===== */
+    const ws = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }], properties: { tabColor: { argb: XL_BLUE } } });
+    setup(ws);
+    ws.columns = [{ width: 24 }, { width: 24 }, { width: 12 }, { width: 11 }, { width: 60 }, { width: 46 }];
+    ws.mergeCells('A1:F1');
+    let c = ws.getCell('A1'); c.value = B.title; c.font = font({ size: 24, bold: true, color: { argb: 'FFFFFFFF' } }); c.fill = fill(XL_INK); c.alignment = { vertical: 'middle', indent: 1 }; ws.getRow(1).height = 46;
+    ws.mergeCells('A2:F2');
+    c = ws.getCell('A2'); c.value = 'Briefing para ' + B.areas.join(', ') + ', ' + B.dur + ' min por sesión'; c.font = font({ size: 12, color: { argb: 'FFC9D3EA' } }); c.fill = fill('FF1E2D52'); c.alignment = { vertical: 'middle', indent: 1 }; ws.getRow(2).height = 26;
+    ws.getRow(3).height = 10;
+    const when = bWhenText();
+    const info = [
+      ['Estado', B.approved ? 'APROBADO' : 'Pendiente de aprobación', B.approved ? 'FF1B7F4F' : 'FFB87408', B.approved ? 'FFDDF3E7' : 'FFFBF0DA'],
+      ['Resultado', 'Entran ' + placed + ' de ' + P.total + ' personas en ' + P.sessions.length + ' sesiones.' + (P.unplaced.length ? ' Faltan ' + P.unplaced.length + ' por agendar (están al final de esta hoja).' : ' Todos tienen horario.')],
+      ['Cuándo', when.charAt(0).toUpperCase() + when.slice(1) + '. Nunca en la primera ni en la última hora del turno de cada persona.'],
+      ['Mínimo por sesión', B.min + ' ' + pl(B.min, 'persona', 'personas')],
+      ['Áreas', B.areas.join(', ')]
+    ];
+    info.forEach((x, i) => {
+      const r = 4 + i; ws.mergeCells('B' + r + ':F' + r);
+      const a = ws.getCell('A' + r); a.value = x[0]; a.font = font({ bold: true, color: { argb: XL_MUT } }); a.alignment = { vertical: 'middle', indent: 1 };
+      const v = ws.getCell('B' + r); v.value = x[1]; v.font = font({ bold: !!x[2], color: { argb: x[2] || XL_INK } }); v.alignment = { vertical: 'middle', wrapText: true, indent: 1 };
+      if (x[3]) v.fill = fill(x[3]);
+      ws.getRow(r).height = x[0] === 'Cuándo' ? 36 : 24;
+      ['A', 'B', 'C', 'D', 'E', 'F'].forEach(col => { ws.getCell(col + r).border = { bottom: thin }; });
+    });
+    let r = 4 + info.length + 1;
+    ws.getRow(r - 1).height = 12;
+    // calendario
+    ws.mergeCells('A' + r + ':F' + r);
+    c = ws.getCell('A' + r); c.value = 'Calendario de sesiones'; c.font = font({ size: 16, bold: true }); c.alignment = { vertical: 'middle' };
+    ['A', 'B', 'C', 'D', 'E', 'F'].forEach(col => { ws.getCell(col + r).border = { bottom: { style: 'medium', color: { argb: XL_BLUE } } }; });
+    ws.getRow(r).height = 30; r++;
+    headRow(ws, r, ['Día', 'Hora', 'Duración', 'Personas', 'Quién asiste (cola entre paréntesis)', 'Nota']); r++;
+    if (!P.sessions.length){
+      ws.mergeCells('A' + r + ':F' + r); c = ws.getCell('A' + r); c.value = 'No se pudo armar ninguna sesión con estos datos. Mira la hoja Recomendaciones.'; c.font = font({ italic: true, color: { argb: XL_MUT } }); c.alignment = { indent: 1, vertical: 'middle' }; ws.getRow(r).height = 28; r++;
+    }
+    P.sessions.forEach(s => {
+      const dc = XL_DAY[s.di % XL_DAY.length], row = ws.getRow(r);
+      const names = s.members.map(m => '•  ' + m.rec.name + '  (' + (m.rec.queue || 'sin cola') + ')' + (m.warn ? '   ¡Aviso: ' + m.warn + '!' : '')).join('\n') || '(sin personas)';
+      const note = [((s.cap || 1) > 1 ? 'Regla relajada: salen a la vez hasta ' + s.cap + ' de la misma cola o de Processing. Revisa que haya cobertura.' : ''), (s.members.length < B.min ? 'Menos del mínimo de ' + B.min + ' personas.' : ''), ...s.members.filter(m => m.soft && m.soft.length).map(m => m.soft[0])].filter(Boolean).join('\n');
+      const vals = [bDayName(s.day), fmt(s.start) + ' a ' + fmt(s.end), (s.end - s.start) + ' min', s.members.length, names, note];
+      vals.forEach((v, i) => { const cell = row.getCell(i + 1); cell.value = v; cell.border = box; cell.alignment = { vertical: 'middle', wrapText: true, horizontal: i === 2 || i === 3 ? 'center' : 'left', indent: i === 2 || i === 3 ? 0 : 1 }; cell.font = font(); });
+      const a = row.getCell(1); a.fill = fill(xlTint(dc, 0.82)); a.font = font({ bold: true, size: 12, color: { argb: dc } });
+      row.getCell(2).font = font({ bold: true, size: 12 });
+      row.getCell(4).font = font({ bold: true });
+      row.getCell(6).font = font({ size: 10, color: { argb: note ? 'FFB87408' : XL_MUT } });
+      row.height = Math.max(26, Math.max(s.members.length || 1, lines(note, 52)) * 17 + 10);
+      r++;
+    });
+    // faltan
+    r++;
+    ws.mergeCells('A' + r + ':F' + r);
+    const miss = P.unplaced.length;
+    c = ws.getCell('A' + r); c.value = 'Personas que faltan por agendar (' + miss + ')'; c.font = font({ size: 16, bold: true, color: { argb: miss ? 'FFD3263A' : 'FF1B7F4F' } }); c.alignment = { vertical: 'middle' };
+    ['A', 'B', 'C', 'D', 'E', 'F'].forEach(col => { ws.getCell(col + r).border = { bottom: { style: 'medium', color: { argb: miss ? 'FFD3263A' : 'FF1B7F4F' } } }; });
+    ws.getRow(r).height = 30; r++;
+    if (miss){
+      headRow(ws, r, ['Nombre', 'Área y cola', 'Por qué no entró'], 'FFD3263A'); ws.mergeCells('C' + r + ':F' + r); r++;
+      P.unplaced.forEach(u => {
+        const row = ws.getRow(r); ws.mergeCells('C' + r + ':F' + r);
+        const why = bWhyText(u) + (u.alt ? '. Podría el ' + B.days[u.alt.di].label + ' a las ' + fmt(u.alt.t) + '.' : '.');
+        row.getCell(1).value = u.name; row.getCell(1).font = font({ bold: true }); row.getCell(1).fill = fill('FFFBE7EA');
+        row.getCell(2).value = u.rec ? u.rec.area + ', ' + (u.rec.queue || 'sin cola') : ''; row.getCell(3).value = why;
+        for (let i = 1; i <= 6; i++){ const cell = row.getCell(i); cell.border = box; cell.alignment = { vertical: 'middle', wrapText: true, indent: i === 1 || i === 2 || i === 3 ? 1 : 0 }; }
+        row.getCell(3).font = font({ size: 10 });
+        row.height = Math.max(26, lines(why, 118) * 15 + 10);
+        r++;
+      });
+    } else {
+      ws.mergeCells('A' + r + ':F' + r); c = ws.getCell('A' + r); c.value = 'Nadie falta: todas las personas elegidas tienen horario.'; c.font = font({ bold: true, color: { argb: 'FF1B7F4F' } }); c.fill = fill('FFDDF3E7'); c.alignment = { indent: 1, vertical: 'middle' }; ws.getRow(r).height = 28; r++;
+    }
+    // cómo leerlo
+    r++;
+    ws.mergeCells('A' + r + ':F' + r); c = ws.getCell('A' + r); c.value = 'Cómo leer este archivo'; c.font = font({ size: 13, bold: true, color: { argb: XL_MUT } }); ws.getRow(r).height = 24; r++;
+    ['Cada fila del calendario es una sesión: el día, la hora y las personas que asisten con su cola entre paréntesis.',
+     'Regla relajada: en esa sesión salen a la vez 2 o 3 personas de la misma cola (o de Processing) para poder llegar al mínimo. Conviene revisar que haya cobertura.',
+     'Hoja “Por persona”: cada asistente con su día, hora, breaks y turno, ordenado por nombre. Hoja “Faltan”: quienes no tienen horario; sirve para armar el siguiente training solo con ellos.'
+    ].forEach(t => { ws.mergeCells('A' + r + ':F' + r); const cell = ws.getCell('A' + r); cell.value = t; cell.font = font({ size: 10, color: { argb: XL_MUT }, italic: true }); cell.alignment = { wrapText: true, vertical: 'top', indent: 1 }; ws.getRow(r).height = 30; r++; });
+
+    /* ===== Hoja 2: Por persona ===== */
+    const wp = wb.addWorksheet('Por persona', { views: [{ state: 'frozen', xSplit: 1, ySplit: 1, showGridLines: false }] });
+    setup(wp);
+    wp.columns = [{ width: 28 }, { width: 14 }, { width: 18 }, { width: 38 }, { width: 15 }, { width: 22 }, { width: 11 }, { width: 11 }, { width: 20 }, { width: 58 }];
+    headRow(wp, 1, ['Nombre', 'Área', 'Queue (Main Task)', 'Task (Secondary Task)', 'Día', 'Hora del briefing', 'Break 1', 'Break 2', 'Turno', 'Notas']);
+    const att = bAttRows().sort((a, b) => a.r.name.localeCompare(b.r.name));
+    att.forEach((x, i) => {
+      const row = wp.getRow(i + 2), dc = XL_DAY[x.s.di % XL_DAY.length], q = XL_Q[x.r.queue] || 'FF5F6A8A';
+      const note = [x.warn ? 'Aviso: ' + x.warn : '', ((x.s.cap || 1) > 1 ? 'Sesión con regla relajada.' : ''), ...(x.soft || [])].filter(Boolean).join(' ');
+      [x.r.name, x.r.area, x.r.queue || 'sin cola', mainText(x.r) || 'sin task', bDayName(x.s.day), fmt(x.s.start) + ' a ' + fmt(x.s.end), x.r.b1 != null ? fmt(x.r.b1) : '', x.r.b2 != null ? fmt(x.r.b2) : '', fmt(x.r.start) + ' a ' + fmt(x.r.end), note].forEach((v, k) => {
+        const cell = row.getCell(k + 1); cell.value = v; cell.border = box; cell.font = font(); cell.alignment = { vertical: 'middle', wrapText: true, indent: k === 6 || k === 7 ? 0 : 1, horizontal: k === 6 || k === 7 ? 'center' : 'left' };
+        if (i % 2) cell.fill = fill(XL_SOFT);
+      });
+      row.getCell(1).font = font({ bold: true });
+      row.getCell(3).fill = fill(xlTint(q, 0.85)); row.getCell(3).font = font({ bold: true, color: { argb: q } });
+      row.getCell(5).fill = fill(xlTint(dc, 0.82)); row.getCell(5).font = font({ bold: true, color: { argb: dc } });
+      row.getCell(6).font = font({ bold: true });
+      row.getCell(10).font = font({ size: 10, color: { argb: x.warn ? 'FFD3263A' : 'FFB87408' } });
+      row.height = Math.max(24, lines(note, 56) * 14 + 8);
+    });
+    if (att.length) wp.autoFilter = { from: { row: 1, column: 1 }, to: { row: att.length + 1, column: 10 } };
+
+    /* ===== Hoja 3: Faltan (la primera fila son los títulos, para poder volver a cargarla) ===== */
+    const wf = wb.addWorksheet('Faltan', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }], properties: { tabColor: { argb: miss ? 'FFD3263A' : 'FF1B7F4F' } } });
+    setup(wf);
+    wf.columns = [{ width: 28 }, { width: 14 }, { width: 18 }, { width: 100 }, { width: 22 }];
+    headRow(wf, 1, ['Nombre', 'Área', 'Queue (Main Task)', 'Motivo', 'Alternativa'], miss ? 'FFD3263A' : 'FF1B7F4F');
+    if (miss) P.unplaced.forEach((u, i) => {
+      const row = wf.getRow(i + 2), why = bWhyText(u);
+      [u.name, u.rec ? u.rec.area : '', u.rec ? u.rec.queue : '', why, u.alt ? B.days[u.alt.di].label + ' ' + fmt(u.alt.t) : ''].forEach((v, k) => {
+        const cell = row.getCell(k + 1); cell.value = v; cell.border = box; cell.font = font(); cell.alignment = { vertical: 'middle', wrapText: true, indent: 1 };
+      });
+      row.getCell(1).font = font({ bold: true }); row.getCell(1).fill = fill('FFFBE7EA');
+      row.height = Math.max(24, lines(why, 98) * 15 + 8);
+    });
+    else { const row = wf.getRow(2); row.getCell(1).value = 'Nadie falta'; row.getCell(1).font = font({ bold: true, color: { argb: 'FF1B7F4F' } }); row.getCell(1).fill = fill('FFDDF3E7'); row.getCell(4).value = 'Todas las personas elegidas tienen horario.'; row.height = 26; }
+
+    /* ===== Hoja 4: Recomendaciones ===== */
+    const wr = wb.addWorksheet('Recomendaciones', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+    setup(wr);
+    wr.columns = [{ width: 16 }, { width: 130 }];
+    headRow(wr, 1, ['Tipo', 'Recomendación']);
+    B.recs.forEach((x, i) => {
+      const row = wr.getRow(i + 2), col = x.kind === 'warn' ? 'FFB87408' : x.kind === 'ok' ? 'FF1B7F4F' : XL_BLUE;
+      row.getCell(1).value = x.kind === 'warn' ? 'Atención' : x.kind === 'ok' ? 'Todo bien' : 'Sugerencia';
+      row.getCell(2).value = x.text;
+      [1, 2].forEach(k => { const cell = row.getCell(k); cell.border = box; cell.font = font(); cell.alignment = { vertical: 'middle', wrapText: true, indent: 1, horizontal: 'left' }; });
+      row.getCell(1).fill = fill(xlTint(col, 0.86)); row.getCell(1).font = font({ bold: true, color: { argb: col } });
+      row.height = Math.max(26, lines(x.text, 125) * 15 + 10);
+    });
+
+    const out = await wb.xlsx.writeBuffer();
+    await S.dl.save({ filename: bFileBase() + '.xlsx', data: new Uint8Array(out) });
+    toast('Excel del briefing listo.');
+  }catch(e){ if (!(e && e.code === 'declined')) toast(e && e.message ? e.message : 'No pude generar el Excel.'); }
+}
+
+async function bXlsxPlain(){
+  if (!S.dl) return;
+  try{
+    const P = B.plan, placed = P.sessions.reduce((n, s) => n + s.members.length, 0);
+    const wb = XLSX.utils.book_new();
+    const sess = [['Día', 'Inicio', 'Fin', 'Personas', 'Asistentes', 'Nota']].concat(P.sessions.map(s => [bDayName(s.day), fmt(s.start), fmt(s.end), s.members.length, s.members.map(m => m.rec.name).join(', '), ((s.cap || 1) > 1 ? 'Regla relajada (hasta ' + s.cap + ' de la misma cola fuera a la vez). ' : '') + (s.members.length < B.min ? 'Menos del mínimo.' : '')]));
+    const a = XLSX.utils.aoa_to_sheet([['Briefing', B.title], ['Áreas', B.areas.join(', ')], ['Duración', B.dur + ' min'], ['Cuándo', bWhenText()], ['Mínimo por sesión', B.min], ['Estado', B.approved ? 'Aprobado' : 'Pendiente de aprobación'], ['Personas', P.total], ['Con horario', placed], ['Sesiones', P.sessions.length], ['Faltan por agendar', P.unplaced.length], []].concat(sess, [[], ['Personas que faltan por agendar']], P.unplaced.length ? P.unplaced.map(u => [u.name, u.rec ? u.rec.area : '', u.rec ? u.rec.queue : '', u.reasons.join('; ')]) : [['Nadie falta']]));
+    a['!cols'] = [{ wch: 22 }, { wch: 40 }, { wch: 12 }, { wch: 10 }, { wch: 70 }, { wch: 60 }];
+    XLSX.utils.book_append_sheet(wb, a, 'Briefing');
+    const att = [['Día', 'Inicio', 'Fin', 'Nombre', 'Área', 'Queue (Main Task)', 'Task (Secondary Task)', 'Break 1', 'Break 2', 'Turno', 'Nota']].concat(bAttRows().map(x => [bDayName(x.s.day), fmt(x.s.start), fmt(x.s.end), x.r.name, x.r.area, x.r.queue, mainText(x.r), x.r.b1 != null ? fmt(x.r.b1) : '', x.r.b2 != null ? fmt(x.r.b2) : '', fmt(x.r.start) + ' a ' + fmt(x.r.end), (x.warn ? 'Aviso: ' + x.warn + '. ' : '') + x.soft.join('; ')]));
+    const b = XLSX.utils.aoa_to_sheet(att);
+    b['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 26 }, { wch: 14 }, { wch: 18 }, { wch: 36 }, { wch: 10 }, { wch: 10 }, { wch: 20 }, { wch: 50 }];
+    XLSX.utils.book_append_sheet(wb, b, 'Asistentes');
+    const miss = P.unplaced.length ? P.unplaced.map(u => [u.name, u.rec ? u.rec.area : '', u.rec ? u.rec.queue : '', u.reasons.join('; '), u.alt ? B.days[u.alt.di].label + ' ' + fmt(u.alt.t) : '']) : [['Nadie falta', '', '', '', '']];
+    const c = XLSX.utils.aoa_to_sheet([['Nombre', 'Área', 'Queue (Main Task)', 'Motivo', 'Alternativa']].concat(miss));
+    c['!cols'] = [{ wch: 26 }, { wch: 14 }, { wch: 18 }, { wch: 80 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, c, 'Faltan');
+    const d = XLSX.utils.aoa_to_sheet([['Tipo', 'Recomendación']].concat(B.recs.map(r => [r.kind === 'warn' ? 'Atención' : r.kind === 'ok' ? 'Todo bien' : 'Sugerencia', r.text])));
+    d['!cols'] = [{ wch: 12 }, { wch: 140 }];
+    XLSX.utils.book_append_sheet(wb, d, 'Recomendaciones');
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    await S.dl.save({ filename: bFileBase() + '.xlsx', data: new Uint8Array(out) });
+    toast('Excel del briefing listo.');
+  }catch(e){ if (!(e && e.code === 'declined')) toast(e && e.message ? e.message : 'No pude generar el Excel.'); }
+}
+async function bPdf(){
+  if (!S.dl) return;
+  try{
+    const lib = window.jspdf && window.jspdf.jsPDF;
+    if (!lib) throw new Error('No cargó la librería del PDF. Revisa tu conexión y recarga la página.');
+    const P = B.plan, placed = P.sessions.reduce((n, s) => n + s.members.length, 0);
+    const doc = new lib({ unit: 'mm', format: 'a4' });
+    const W = 210, M = 16, TW = W - 2 * M, INK = [16, 27, 51], MUT = [86, 98, 128];
+    let y = 20;
+    const ensure = h => { if (y + h > 282){ doc.addPage(); y = 20; } };
+    const txt = (s, size, bold, color, ind) => {
+      doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor.apply(doc, color || INK);
+      const lh = size * 0.40 + 1.4;
+      doc.splitTextToSize(pdfT(s), TW - (ind || 0)).forEach(l => { ensure(lh); doc.text(l, M + (ind || 0), y); y += lh; });
+    };
+    const rule = () => { ensure(4); doc.setDrawColor(212, 218, 230); doc.line(M, y, W - M, y); y += 5; };
+    doc.setFillColor(47, 91, 234); doc.rect(0, 0, W, 6, 'F');
+    txt(B.title, 20, true);
+    y += 1;
+    txt(B.areas.join(', ') + ', ' + B.dur + ' min, ' + bWhenText() + ', mínimo ' + B.min + ' por sesión', 10.5, false, MUT);
+    txt('Estado: ' + (B.approved ? 'APROBADO' : 'Pendiente de aprobación'), 10.5, true, B.approved ? [27, 127, 79] : [184, 116, 8]);
+    txt('Generado: ' + new Date().toLocaleDateString('es'), 9.5, false, MUT);
+    y += 2; rule();
+    txt('Entran ' + placed + ' de ' + P.total + ' personas en ' + P.sessions.length + ' sesiones de ' + B.dur + ' min.' + (P.unplaced.length ? ' Faltan ' + P.unplaced.length + ' sin horario.' : ''), 11.5, true);
+    y += 2;
+    const byDay = {};
+    P.sessions.forEach(s => { (byDay[s.di] = byDay[s.di] || []).push(s); });
+    Object.keys(byDay).map(Number).sort((a, b) => a - b).forEach(di => {
+      ensure(14); y += 2; txt(bDayName(B.days[di]), 13, true, [47, 91, 234]);
+      byDay[di].forEach(s => {
+        ensure(10 + s.members.length * 5.5);
+        txt(fmt(s.start) + ' a ' + fmt(s.end) + ((s.cap || 1) > 1 ? '  (regla relajada: hasta ' + s.cap + ' de la misma cola fuera a la vez)' : ''), 11, true);
+        s.members.forEach(m => {
+          const r = m.rec, br = [r.b1, r.b2].filter(x => x != null).map(fmt).join(' y ');
+          txt('- ' + r.name + ' (' + r.area + ', ' + (r.queue || 'sin cola') + ') Task: ' + (mainText(r) || 'sin task') + (br ? '. Breaks: ' + br : '') + (m.warn ? '. AVISO: ' + m.warn : ''), 9.5, false, INK, 4);
+        });
+        y += 1.5;
+      });
+    });
+    y += 3; ensure(14); txt('Recomendaciones', 13, true);
+    B.recs.forEach(r => txt('- ' + r.text, 9.5, false, INK, 4));
+    y += 3; ensure(14); txt('Personas que faltan por agendar (' + P.unplaced.length + ')', 13, true, P.unplaced.length ? [211, 38, 58] : [27, 127, 79]);
+    if (P.unplaced.length) P.unplaced.forEach(u => txt('- ' + u.name + (u.rec ? ' (' + u.rec.area + ', ' + (u.rec.queue || 'sin cola') + ')' : '') + ': ' + bWhyText(u) + (u.alt ? '. Podría el ' + B.days[u.alt.di].label + ' a las ' + fmt(u.alt.t) + '.' : ''), 9.5, false, INK, 4));
+    else txt('Nadie falta: todas las personas elegidas tienen horario.', 9.5, false, INK, 4);
+    y += 8; ensure(24);
+    doc.setDrawColor.apply(doc, INK); doc.line(M, y + 8, M + 80, y + 8); doc.line(M + 100, y + 8, W - M, y + 8);
+    txt('Aprobado por', 9, false, MUT); doc.setFontSize(9); doc.text('Fecha', M + 100, y);
+    const out = doc.output('arraybuffer');
+    await S.dl.save({ filename: bFileBase() + '.pdf', data: new Uint8Array(out) });
+    toast('PDF del briefing listo.');
+  }catch(e){ if (!(e && e.code === 'declined')) toast(e && e.message ? e.message : 'No pude generar el PDF.'); }
+}
+
+/* ---------- seguimiento: elegir solo a los que faltan ---------- */
+function bApplyNames(names){
+  const keys = new Set(names.map(nt)), found = new Set();
+  B.people.forEach(p => { if (keys.has(p.key)) found.add(p.key); });
+  const miss = names.filter(n => !found.has(nt(n)));
+  if (!found.size){ B.impMsg = 'No encontré a ninguna de esas personas entre las áreas elegidas. Revisa los nombres o el área.'; render(); return; }
+  B.people.forEach(p => { p.on = found.has(p.key); });
+  B.plan = null; B.approved = false;
+  B.impMsg = 'Marqué solo a ' + found.size + ' ' + pl(found.size, 'persona', 'personas') + '.' + (miss.length ? ' No encontré en este Excel a: ' + miss.join(', ') + '.' : '');
+  render();
+}
+async function bImportPrev(file){
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const nm = wb.SheetNames.find(n => nt(n) === 'faltan') || wb.SheetNames.find(n => nt(n) === 'sin horario');
+    if (!nm) throw new Error('Ese Excel no tiene la hoja “Faltan”. Usa el Excel que descargaste de la propuesta del briefing anterior.');
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[nm], { header: 1, defval: '' });
+    const names = rows.slice(1).map(r => String(r[0] || '').trim()).filter(n => n && nt(n) !== 'nadie falta');
+    if (!names.length){ B.impMsg = 'En ese Excel no faltaba nadie.'; render(); return; }
+    bApplyNames(names);
+  }catch(e){ B.impMsg = e && e.message ? e.message : 'No pude leer ese archivo.'; render(); }
+}
+
+/* ---------- eventos del briefing ---------- */
+function bIsPage(){ return S.page === 'briefing'; }
+function bPlace(si, key){
+  const r = brAddMember(B.days, B.plan, B.opts, si, key);
+  B.approved = false; render();
+  toast(r.ok ? 'Listo, ya quedó en la sesión.' : (r.msg ? 'Quedó con aviso: ' + r.msg + '.' : 'No se pudo mover.'));
+}
+app.addEventListener('click', e => {
+  if (!bIsPage()) return;
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const a = t.dataset.act;
+  const reset = () => { B.plan = null; B.approved = false; };
+  if (a === 'b-next'){ if (B.step < 6){ B.step += 1; render(); } }
+  else if (a === 'b-back'){ if (B.step > 1){ B.step -= 1; render(); } }
+  else if (a === 'b-go'){ B.step = +t.dataset.s; render(); }
+  else if (a === 'b-area'){ const v = t.dataset.v; B.areas = B.areas.includes(v) ? B.areas.filter(x => x !== v) : B.areas.concat(v); reset(); if (B.days.length) bBuildPeople(); render(); }
+  else if (a === 'b-addarea'){ const el = $('#b-custom'), v = el && el.value.trim(); if (v && !B.areas.some(x => nt(x) === nt(v))){ B.areas.push(v); reset(); if (B.days.length) bBuildPeople(); } render(); }
+  else if (a === 'b-mode'){
+    B.mode = t.dataset.v; reset();
+    if (B.mode === 'am' && B.start >= 780) B.start = 600;
+    if (B.mode === 'pm' && B.start < 780) B.start = 840;
+    if (B.mode === 'both'){ if (B.start >= 780) B.start = 600; if (B.start2 < 780) B.start2 = 840; }
+    if (B.mode === 'margin' && B.tolKey === 'all') B.tolKey = '120';
+    render();
+  }
+  else if (a === 'b-spread'){ B.spread = t.dataset.v === '1'; reset(); render(); }
+  else if (a === 'b-dur'){ B.dur = +t.dataset.v; reset(); render(); }
+  else if (a === 'b-min'){ B.min = +t.dataset.v; reset(); render(); }
+  else if (a === 'b-flex'){ B.flex = t.dataset.v === '1'; reset(); render(); }
+  else if (a === 'b-person'){ const p = B.people.find(x => x.key === t.dataset.k); if (p){ p.on = t.checked; reset(); render(); } }
+  else if (a === 'b-area-all'){ B.people.forEach(p => { if (p.area === t.dataset.a) p.on = t.dataset.on === '1'; }); reset(); render(); }
+  else if (a === 'b-day'){ const i = +t.dataset.i; B.dayOn[i] = !B.dayOn[i]; reset(); render(); }
+  else if (a === 'b-analyze'){ bAnalyze(); }
+  else if (a === 'b-edit'){ B.step = 3; render(); }
+  else if (a === 'b-edit-toggle'){ B.edit = !B.edit; render(); }
+  else if (a === 'b-approve'){ B.approved = !B.approved; render(); }
+  else if (a === 'b-rm'){
+    const p0 = B.plan.unplaced.length, who = (B.people.find(x => x.key === t.dataset.k) || {}).name || 'La persona';
+    const r = brRemoveMember(B.days, B.plan, B.opts, t.dataset.k); B.approved = false; render();
+    const extra = B.plan.unplaced.length < p0 + (r.moved ? 0 : 1) ? ' Además se acomodaron otras personas que esperaban.' : '';
+    toast(r.moved ? (r.session.members.length < B.min ? who + ' quedó el ' + bSessLabel(r.session) + ' en una sesión aparte, con menos del mínimo (' + r.session.members.length + ' de ' + B.min + '). Revísala o agrégale gente.' : who + ' ya está re-agendado(a) el ' + bSessLabel(r.session) + '.') + extra : who + ' no cabe en otro día con las reglas; quedó en “Personas que faltan”.' + extra);
+  }
+  else if (a === 'b-delsess'){ brDeleteSession(B.days, B.plan, B.opts, +t.dataset.si); B.approved = false; render(); }
+  else if (a === 'b-newsess'){
+    const di = +($('#b-newday') || {}).value, tv = ($('#b-newtime') || {}).value;
+    if (!tv || isNaN(di)){ toast('Elige el día y la hora.'); return; }
+    const [h, m] = tv.split(':').map(Number), st = h * 60 + m;
+    if (st < 360 || st + B.dur > 1380){ toast('La sesión tiene que caber entre las 6:00 am y las 11:00 pm.'); return; }
+    brNewSession(B.days, B.plan, B.opts, di, st); B.approved = false; render(); toast('Sesión creada. Agrégale personas con el selector.');
+  }
+  else if (a === 'b-again'){
+    const keys = B.plan.unplaced.map(x => x.key);
+    B.people.forEach(p => { p.on = keys.includes(p.key); });
+    B.title = B.title.replace(/ \(faltantes\)$/i, '') + ' (faltantes)';
+    B.plan = null; B.approved = false; B.edit = false; B.impMsg = ''; B.step = 5; render(); window.scrollTo(0, 0);
+    toast('Dejé marcadas solo a las ' + keys.length + ' personas que faltan. Ajusta lo que quieras y vuelve a analizar.');
+  }
+  else if (a === 'b-import'){ $('#bprev').click(); }
+  else if (a === 'b-paste-apply'){ const el = $('#b-paste'); bApplyNames(String(el ? el.value : '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean)); }
+  else if (a === 'b-xlsx'){ bXlsx(); }
+  else if (a === 'b-pdf'){ bPdf(); }
+});
+app.addEventListener('input', e => {
+  if (!bIsPage()) return;
+  const t = e.target, k = t.dataset && t.dataset.b; if (!k) return;
+  if (k === 'title'){ B.title = t.value; B.plan = null; const n = $('#b-next'); if (n) n.disabled = !B.title.trim(); }
+  else if (k === 'dur'){ B.dur = Math.max(0, Math.round(+t.value || 0)); B.plan = null; const n = $('#b-next'); if (n) n.disabled = B.dur < 5 || !bTimeOk(); const p = $('#b-prev'); if (p) p.textContent = bPreview(); }
+  else if ((k === 'start2' || k === 'wfrom' || k === 'wto') && t.value){
+    const [h, m] = t.value.split(':').map(Number), v = h * 60 + m;
+    if (k === 'start2') B.start2 = v; else if (k === 'wfrom') B.winFrom = v; else B.winTo = v;
+    B.plan = null; const n = $('#b-next'); if (n) n.disabled = !(B.dur >= 5 && bTimeOk()); const p = $('#b-prev'); if (p) p.textContent = bPreview();
+  }
+  else if (k === 'start' && t.value){ const [h, m] = t.value.split(':').map(Number); B.start = h * 60 + m; B.plan = null; const p = $('#b-prev'); if (p) p.textContent = bPreview(); }
+});
+app.addEventListener('change', e => {
+  if (!bIsPage()) return;
+  const t = e.target, b = t.dataset && t.dataset.b;
+  if (b === 'tol'){ B.tolKey = t.value; B.plan = null; const p = $('#b-prev'); if (p) p.textContent = bPreview(); }
+  else if ((b === 'move' || b === 'assign') && t.value !== '') bPlace(+t.value, t.dataset.k);
+  else if (b === 'add' && t.value) bPlace(+t.dataset.si, t.value);
+});
+app.addEventListener('keydown', e => {
+  if (bIsPage() && e.key === 'Enter' && e.target.id === 'b-title' && B.title.trim()){ B.step = 2; render(); }
+});
+$('#bprev').addEventListener('change', e => { const f = e.target.files[0]; if (f) bImportPrev(f); e.target.value = ''; });
+$('#bfile').addEventListener('change', e => { const f = e.target.files[0]; if (f) bLoad(f); e.target.value = ''; });
+
+/* ---------- tasks: aplicar acciones ---------- */
+function describeOp(op){
+  if (op.type === 'set' || op.type === 'put') return first(op.rec.name) + ' ahora lleva “' + op.task + '”.';
+  if (op.type === 'swap') return first(op.a.name) + ' y ' + first(op.b.name) + ' intercambiaron tasks.';
+  if (op.type === 'move') return 'Pasé “' + op.task + '” de ' + first(op.from.name) + ' a ' + first(op.to.name) + '.';
+  if (op.type === 'add') return first(op.rec.name) + ' ahora también lleva “' + op.tokens.join(' | ') + '”.';
+  if (op.type === 'movetok') return 'Pasé “' + op.tokens.join(' | ') + '” de ' + op.from.map(r => first(r.name)).join(' y ') + ' a ' + first(op.to.name) + '.';
+  return 'Apliqué el reacomodo del macro.';
+}
+function applyOp(op){
+  const mv = runOp(op); if (!mv.length) return;
+  S.undo.push({ moves:mv }); render(); toastMsg(describeOp(op), true);
+}
+function runAutoTasks(days){
+  const all = []; let left = 0;
+  days.forEach(d => {
+    const bad = () => taskIssues(d).filter(i => !i.soft);
+    const tried = new Set();
+    for (let n = 0; n < 40; n++){
+      const before = bad().length;
+      const list = bad().filter(i => i.cands.length && !tried.has(i.id));
+      list.sort((a, b) => (b.group === 'Reacomodo') - (a.group === 'Reacomodo'));
+      let done = false;
+      for (const i of list){
+        const mv = runOp(i.cands[0].op);
+        if (!mv.length){ tried.add(i.id); continue; }
+        if (bad().length < before){ mv.forEach(m => all.push(m)); done = true; break; }
+        mv.slice().reverse().forEach(m => { m.rec[m.k] = m.from; }); tried.add(i.id);
+      }
+      if (!done) break;
+    }
+    left += bad().length;
+  });
+  if (all.length) S.undo.push({ moves:all });
+  render();
+  toastMsg(all.length ? 'Hice ' + all.length + ' ' + pl(all.length, 'cambio', 'cambios') + ' de tasks.' + (left ? ' Quedan ' + left + ' sin cubrir porque no hay gente que cumpla las reglas.' : ' Todos los tasks quedaron cubiertos.') : (left ? 'No encontré cambios que mejoren; quedan ' + left + ' sin cubrir.' : 'Los tasks ya estaban completos.'), all.length > 0);
+}
+function checklistHTML(d){
+  const E = planDay(d), deps = [];
+  E.forEach(e => { if (!deps.includes(e.dept)) deps.push(e.dept); });
+  let h = '<details class="chk" open><summary>Tasks del día según el macro</summary><div class="chkGrid">';
+  deps.forEach(dep => {
+    h += '<section class="chkCard"><h3>' + esc(dep) + '</h3><ul>';
+    E.filter(e => e.dept === dep && e.status !== 'rule').forEach(e => {
+      const when = e.shift && e.shift !== 'día' ? e.shift : '';
+      if (e.status === 'ok' || e.status === 'missing'){
+        const nm2 = (e.holders || []).slice(0, 3).map(r => first(r.name)).join(', ');
+        const who = e.status === 'ok' ? nm2 + (when ? ', ' + when : '') : 'falta ' + e.miss + (when ? ' (' + when + ')' : '');
+        h += '<li class="ck ' + (e.status === 'ok' ? 'ok' : 'bad') + '"><span class="ckd"></span><span class="ckg">' + esc(e.group) + '</span><span class="ckw">' + esc(who) + '</span></li>';
+      } else h += '<li class="ck ' + (e.soft || e.status === 'info' ? 'soft' : 'bad') + '"><span class="ckd"></span><span class="ckg">' + esc(e.text) + '</span></li>';
+    });
+    h += '</ul></section>';
+  });
+  return h + '</div></details>';
+}
 
 /* ---------- carga de archivo ---------- */
 async function loadFile(file){
@@ -630,7 +2278,7 @@ function runAuto(days){
   days.forEach(d => {
     const mv = autoFix(d);
     mv.forEach(m => all.push({ rec:m.r, k:m.k, from:m.from }));
-    const rest = buildIssues(d).filter(i => i.type === 'queue' || i.type === 'task');
+    const rest = buildIssues(d, true).filter(i => i.type === 'queue' || i.type === 'task' || i.type === 'area');
     left += rest.length;
     rest.forEach(i => { if (i.items.some(x => x.r.end != null && x.r.start != null && x.r.end <= x.r.start)) blocked++; });
   });
@@ -659,6 +2307,8 @@ $('#toast').addEventListener('click', e => { if (e.target.closest('[data-act="un
 
 /* ---------- render ---------- */
 function render(){
+  if (S.page === 'briefing'){ renderBriefing(); return; }
+  $('#tools').hidden = !S.days.length;
   if (!S.days.length){ renderLanding(); return; }
   const scroller = document.querySelector('.boardScroll');
   const sl = scroller ? scroller.scrollLeft : 0, st = scroller ? scroller.scrollTop : 0;
@@ -668,7 +2318,7 @@ function render(){
   const all = S.days.map(buildIssues);
   const issues = all[S.di];
   app.innerHTML = '<div class="ws">' + tabsHTML(all) + sumHTML(d, issues) +
-    '<div class="grid"><section class="panel" aria-label="Tablero del día">' + inspectorHTML() + boardHTML(d, issues) + '</section>' + sideHTML(d, issues) + '</div></div>' + exportHTML();
+    '<div class="grid"><section class="panel" aria-label="Tablero del día">' + inspectorHTML() + boardHTML(d, issues) + checklistHTML(d) + '</section>' + sideHTML(d, issues) + '</div></div>' + exportHTML();
   const sc = document.querySelector('.boardScroll');
   if (sc){ sc.scrollLeft = sl; sc.scrollTop = st; }
   const ce = document.querySelector('.cards'); if (ce) ce.scrollTop = cst;
@@ -691,17 +2341,21 @@ function tabsHTML(all){
 
 function sumHTML(d, issues){
   const act = issues.filter(i => !S.ignored.has(i.id));
-  const nq = act.filter(i => i.type === 'queue').length, nt = act.filter(i => i.type === 'task').length;
+  const nq = act.filter(i => i.type === 'queue' || i.type === 'area').length, nt = act.filter(i => i.type === 'task').length;
   const nc = act.filter(i => i.type === 'cover' && (i.kind === 'thin' || i.kind === 'empty')).length;
-  const nm = act.length - nq - nt - nc;
+  const na = act.filter(i => i.type === 'assign' && !i.soft).length;
+  const nm = act.length - nq - nt - nc - na;
   let s;
   if (nq + nt + nc === 0) s = d.label + ' ' + d.dom + ': sin choques ni huecos de cobertura.';
   else s = d.label + ' ' + d.dom + ': ' + nq + ' ' + pl(nq, 'choque', 'choques') + ' de break, ' + nt + ' de task y ' + nc + ' ' + pl(nc, 'hueco', 'huecos') + ' de cobertura.';
+  if (na) s += ' Faltan ' + na + ' ' + pl(na, 'asignación', 'asignaciones') + ' de tasks.';
   if (nm) s += ' Además ' + nm + ' ' + pl(nm, 'aviso menor', 'avisos menores') + '.';
-  const anyChange = d.recs.some(r => isChanged(r, 'b1') || isChanged(r, 'b2') || r.end !== r.oe);
+  const anyChange = d.recs.some(r => isChanged(r, 'b1') || isChanged(r, 'b2') || r.end !== r.oe || r.task !== r.ot || r.queue !== r.oq);
   return '<div class="sumbar"><p>' + esc(s) + '</p>' +
     '<button class="btn" data-act="auto-day">Arreglar este día</button>' +
     '<button class="btn" data-act="auto-week">Arreglar la semana</button>' +
+    '<button class="btn" data-act="auto-tasks">Completar tasks del día</button>' +
+    '<button class="btn" data-act="auto-tasks-week">Completar tasks de la semana</button>' +
     '<button class="btn ghost" data-act="reset-day"' + (anyChange ? '' : ' disabled') + '>Restablecer día</button>' + (S.dl === null ? '' : '<button class="btn primary" data-act="dl-xlsx"' + (changeList().length ? '' : ' disabled') + '>Descargar Excel corregido</button>') + '</div>';
 }
 
@@ -721,7 +2375,7 @@ function inspectorHTML(){
 
 function boardHTML(d, issues){
   const flagged = new Set();
-  issues.filter(i => (i.type === 'queue' || i.type === 'task') && !S.ignored.has(i.id)).forEach(i => i.items.forEach(x => flagged.add(x.r.id + ':' + x.k)));
+  issues.filter(i => (i.type === 'queue' || i.type === 'task' || i.type === 'area') && !S.ignored.has(i.id)).forEach(i => i.items.forEach(x => flagged.add(x.r.id + ':' + x.k)));
   const byLane = {}; d.recs.forEach(r => { (byLane[laneOf(r)] = byLane[laneOf(r)] || []).push(r); });
   const order = LANES.concat(['Otros']).filter(l => byLane[l]);
   const px = m => ((m - S0) / STEP) * S.col;
@@ -750,7 +2404,7 @@ function boardHTML(d, issues){
     const rows = byLane[l].slice().sort((a, b) => (a.start - b.start) || a.name.localeCompare(b.name));
     const collapsible = (l === 'Overflow' || l === 'Otros');
     const isOpen = !collapsible || S.open[l];
-    const qIssues = issues.filter(i => i.type === 'queue' && i.key === l && !S.ignored.has(i.id));
+    const qIssues = issues.filter(i => ((i.type === 'queue' && i.key === l) || (i.type === 'area' && i.items.some(x => laneOf(x.r) === l))) && !S.ignored.has(i.id));
     h += '<section class="lane" style="--q:' + QCOL[l] + '"><div class="laneHead"><i></i>' + l + '<small>' + rows.length + ' ' + pl(rows.length, 'persona', 'personas') + '</small>' +
       (qIssues.length ? '<span class="flag">' + qIssues.length + ' ' + pl(qIssues.length, 'choque', 'choques') + '</span>' : '') +
       (collapsible ? '<button data-act="toggle-lane" data-l="' + l + '">' + (isOpen ? 'Ocultar' : 'Mostrar') + '</button>' : '') + '</div>';
@@ -782,9 +2436,21 @@ function boardHTML(d, issues){
 
 function cardInfo(d, i){
   const recs = d.recs;
+  if (i.type === 'assign'){
+    const where = i.shift && i.shift !== 'día' ? ' de la ' + i.shift : '';
+    const names = i.cands.slice(0, 3).filter(c => c.rec).map(c => c.rec.name + ' (' + c.why + ')');
+    if (i.kind === 'missing') return { cls:'task', title: i.dept + where + ': falta ' + i.group + '.', text: (i.ctx ? 'Es parte de “' + i.ctx + '”. ' : '') + (names.length ? 'Lo puede llevar: ' + names.join('; ') + '.' : 'No hay nadie en turno que cumpla las reglas del macro para llevarlo.') + (i.note ? ' ' + i.note : '') };
+    if (i.kind === 'rule' && i.group === 'Reacomodo') return { cls:'task', title: i.dept + where + ': reacomodo sugerido por el macro', text: i.text };
+    if (i.kind === 'rule') return { cls: i.soft ? 'data' : 'task', title: i.dept + where + ': ' + i.text, text: i.cands.length ? 'Elige una opción para resolverlo.' : 'No encontré un cambio que lo resuelva sin crear otro problema.' };
+    return { cls: i.soft ? 'data' : 'task', title: i.text, text: i.soft ? 'Es un aviso; puede ser normal (por ejemplo, un día libre).' : 'Sin esto, ese task queda sin cubrir.' };
+  }
   if (i.type === 'queue'){
     const names = i.items.map(x => x.r.name + ' (' + kLabel(x.k) + ')');
     return { cls:'queue', title: i.key + ' a las ' + fmt(i.time) + ': salen juntos ' + joinNames(names) + '.', text: i.items.length > 2 ? 'Tres o más de la misma cola en break a la vez dejan poca gente atendiendo.' : 'Dos de la misma cola no deberían estar en break al mismo tiempo.' };
+  }
+  if (i.type === 'area'){
+    const names = i.items.map(x => x.r.name + ' (' + kLabel(x.k) + ')');
+    return { cls:'queue', title: i.key + ' a las ' + fmt(i.time) + ': salen juntos ' + joinNames(names) + '.', text:'Las personas de ' + i.key + ' no deben estar en break al mismo tiempo.' };
   }
   if (i.type === 'task'){
     const m = i.items.filter(x => x.role === 'main'), s = i.items.filter(x => x.role === '2nd');
@@ -800,25 +2466,29 @@ function cardInfo(d, i){
 }
 
 function sideHTML(d, issues){
-  const F = [['all', 'Todo'], ['queue', 'Breaks'], ['task', 'Tasks'], ['cover', 'Cobertura'], ['data', 'Datos']];
+  const F = [['all', 'Todo'], ['queue', 'Breaks'], ['task', 'Tasks'], ['assign', 'Asignación'], ['cover', 'Cobertura'], ['data', 'Datos']];
   const vis = issues.filter(i => S.showIgnored || !S.ignored.has(i.id));
-  const cnt = k => vis.filter(i => k === 'all' || i.type === k).length;
-  let list = vis.filter(i => S.filter === 'all' || i.type === S.filter);
-  const sev = i => (i.type === 'queue' || i.type === 'task') ? 0 : (i.type === 'cover' && i.kind !== 'solo') ? 1 : i.type === 'cover' ? 2 : 3;
+  const ft = i => i.type === 'area' ? 'queue' : i.type;
+  const cnt = k => vis.filter(i => k === 'all' || ft(i) === k).length;
+  let list = vis.filter(i => S.filter === 'all' || ft(i) === S.filter);
+  const sev = i => (i.type === 'queue' || i.type === 'task' || i.type === 'area') ? 0 : (i.type === 'assign' && !i.soft) ? 1 : (i.type === 'cover' && i.kind !== 'solo') ? 1 : i.type === 'cover' ? 2 : 3;
   list.sort((a, b) => sev(a) - sev(b) || a.time - b.time);
   const nIgn = issues.filter(i => S.ignored.has(i.id)).length;
   let cards = '';
   list.forEach(i => {
     const c = cardInfo(d, i), ign = S.ignored.has(i.id);
     let apply = '';
-    if (!ign && (i.type === 'queue' || i.type === 'task' || (i.type === 'cover' && i.kind === 'thin') || (i.type === 'data' && i.key === 'horario'))){
+    if (!ign && (i.type === 'queue' || i.type === 'task' || i.type === 'area' || (i.type === 'cover' && i.kind === 'thin') || (i.type === 'data' && i.key === 'horario'))){
       const m = suggestFor(d, i);
       if (m) apply = '<button class="btn small apply" data-act="apply" data-id="' + esc(i.id) + '">Mover ' + esc(first(m.r.name)) + ' ' + kLabel(m.k) + ' a ' + fmt(m.to) + '</button>';
     }
     if (i.type === 'data' && i.fix) apply = '<button class="btn small apply" data-act="fixend" data-rid="' + i.fix.rec.id + '" data-to="' + i.fix.to + '">Poner salida ' + fmt(i.fix.to) + '</button>';
+    if (!ign && i.type === 'assign' && i.cands.length){
+      apply = i.cands.slice(0, 3).map((c, ci) => '<button class="btn small' + (ci === 0 ? ' apply' : '') + '" data-act="assign-op" data-id="' + esc(i.id) + '" data-ci="' + ci + '">' + esc(c.label || ((c.op.type === 'swap' ? 'Intercambiar con ' : (c.op.type === 'move' || c.op.type === 'movetok') ? 'Pasarlo a ' : 'Asignar a ') + first(c.rec.name))) + '</button>').join('');
+    }
     const target = (i.items && i.items[0]) ? i.items[0].r.id + ':' + i.items[0].k : (i.rec ? i.rec.id : '');
     cards += '<article class="card ' + c.cls + '" data-cid="' + esc(i.id) + '"><div class="rail"></div><div class="bd"><h3>' + esc(c.title) + '</h3><p>' + esc(c.text) + '</p><div class="acts">' +
-      '<button class="btn small" data-act="view" data-id="' + esc(i.id) + '">Ver en el tablero</button>' + apply +
+      (i.type === 'assign' ? '' : '<button class="btn small" data-act="view" data-id="' + esc(i.id) + '">Ver en el tablero</button>') + apply +
       '<button class="btn small ghost" data-act="' + (ign ? 'unignore' : 'ignore') + '" data-id="' + esc(i.id) + '">' + (ign ? 'Volver a avisar' : 'Ignorar') + '</button></div></div></article>';
   });
   if (!cards) cards = '<div class="empty"><b>Todo despejado</b>No hay alertas en esta categoría para ' + esc(d.label) + '.</div>';
@@ -837,7 +2507,10 @@ function changeList(){
     if (isChanged(r, 'b1')) rows.push({ d, r, what:'Break 1', from:r.o1, to:r.b1, cell:r.a1, k:'b1' });
     if (isChanged(r, 'b2')) rows.push({ d, r, what:'Break 2', from:r.o2, to:r.b2, cell:r.a2, k:'b2' });
     if (r.end !== r.oe) rows.push({ d, r, what:'Salida', from:r.oe, to:r.end, cell:r.ae, k:'end' });
+    if (r.task !== r.ot) rows.push({ d, r, what:'Task', from:r.ot, to:r.task, cell:r.at, k:'task', fs:r.ot || '(vacío)', ts:r.task || '(vacío)' });
+    if (r.queue !== r.oq) rows.push({ d, r, what:'Cola', from:r.oq, to:r.queue, cell:r.aq, k:'queue', fs:r.oq || '(vacío)', ts:r.queue || '(vacío)' });
   }));
+  rows.forEach(c => { if (c.fs === undefined){ c.fs = fmt(c.from); c.ts = fmt(c.to); } });
   return rows;
 }
 
@@ -855,7 +2528,7 @@ function exportHTML(){
 function renderLanding(){
   $('#tools').hidden = true;
   app.innerHTML = '<div class="landing"><div><h2>Sube la semana y separa los breaks que se pisan.</h2>' +
-    '<p class="lead">Lee tu Excel de Tasks (una hoja por día), marca los choques de break y de task y los huecos de cobertura, y te deja arreglarlos arrastrando. Al final descargas el mismo Excel con las horas corregidas.</p>' +
+    '<p class="lead">Lee tu Excel de Tasks (una hoja por día), marca los choques de break y de task, los huecos de cobertura y los tasks que faltan por asignar, y te deja arreglarlos. Al final descargas el mismo Excel con las horas corregidas.</p>' +
     '<div class="drop" id="drop"><div><strong>Arrastra aquí el archivo .xlsx</strong><span>Hojas tipo “Monday 16”, “Tuesday 17”…</span></div><button class="btn primary" id="pick" type="button">Elegir archivo</button></div>' +
     '<div class="err" id="err" role="alert"></div><p class="privacy">El archivo se lee en tu navegador; no se envía a ningún servidor.</p></div>' +
     '<div class="demo" aria-label="Ejemplo"><h3>Así se ve un choque y su arreglo</h3><div class="demoLane clash" id="dl"><div class="dSeam"></div>' +
@@ -895,7 +2568,7 @@ async function dlXlsx(){
 async function dlCsv(){
   if (!S.dl) return;
   const rows = [['Día', 'Persona', 'Área', 'Cola', 'Qué', 'Antes', 'Ahora', 'Celda']];
-  changeList().forEach(c => rows.push([c.d.sheetName, c.r.name, c.r.area, c.r.queue, c.what, fmt(c.from), fmt(c.to), c.cell]));
+  changeList().forEach(c => rows.push([c.d.sheetName, c.r.name, c.r.area, c.r.queue, c.what, c.fs, c.ts, c.cell]));
   const csv = '\ufeff' + rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
   try{ await S.dl.save({ filename: stamp(S.name) + ' cambios.csv', data: csv }); }
   catch(e){ if (!(e && e.code === 'declined')) toast('No pude generar la lista.'); }
@@ -903,7 +2576,7 @@ async function dlCsv(){
 function showChanges(){
   const ch = changeList();
   $('#dlgBody').innerHTML = '<table><thead><tr><th>Día</th><th>Persona</th><th>Qué</th><th>Antes</th><th></th><th>Ahora</th><th>Celda</th><th></th></tr></thead><tbody>' +
-    ch.map((c, i) => '<tr><td>' + esc(c.d.label) + '</td><td>' + esc(c.r.name) + '</td><td>' + c.what + '</td><td>' + fmt(c.from) + '</td><td class="arrow">a</td><td><b>' + fmt(c.to) + '</b></td><td>' + c.cell + '</td><td><button class="btn small" data-act="revert-row" data-i="' + i + '">Deshacer</button></td></tr>').join('') + '</tbody></table>';
+    ch.map((c, i) => '<tr><td>' + esc(c.d.label) + '</td><td>' + esc(c.r.name) + '</td><td>' + c.what + '</td><td>' + esc(c.fs) + '</td><td class="arrow">a</td><td><b>' + esc(c.ts) + '</b></td><td>' + c.cell + '</td><td><button class="btn small" data-act="revert-row" data-i="' + i + '">Deshacer</button></td></tr>').join('') + '</tbody></table>';
   $('#dlg').showModal();
 }
 
@@ -924,7 +2597,7 @@ app.addEventListener('click', e => {
   else if (a === 'auto-day'){ runAuto([d]); }
   else if (a === 'auto-week'){ runAuto(S.days); }
   else if (a === 'reset-day'){
-    const mv = []; d.recs.forEach(r => { ['b1', 'b2'].forEach(k => { const o = k === 'b1' ? r.o1 : r.o2; if (r[k] !== o){ mv.push({ rec:r, k, from:r[k] }); r[k] = o; } }); if (r.end !== r.oe){ mv.push({ rec:r, k:'end', from:r.end }); r.end = r.oe; } });
+    const mv = []; d.recs.forEach(r => { ['b1', 'b2'].forEach(k => { const o = k === 'b1' ? r.o1 : r.o2; if (r[k] !== o){ mv.push({ rec:r, k, from:r[k] }); r[k] = o; } }); if (r.end !== r.oe){ mv.push({ rec:r, k:'end', from:r.end }); r.end = r.oe; } [['task', r.ot], ['queue', r.oq]].forEach(([k, o]) => { if (r[k] !== o){ mv.push({ rec:r, k, from:r[k] }); r[k] = o; } }); });
     if (mv.length) S.undo.push({ moves:mv });
     S.sel = null; render(); toastMsg('Dejé ' + d.label + ' como venía en el archivo.', mv.length > 0);
   }
@@ -933,6 +2606,9 @@ app.addEventListener('click', e => {
     const mv = []; S.days.forEach(x => x.recs.forEach(r => { if (r.start != null && r.end != null && r.end <= r.start){ mv.push({ rec:r, k:'end', from:r.end }); r.end = r.start + 480; } }));
     if (mv.length){ S.undo.push({ moves:mv }); render(); toastMsg('Corregí ' + mv.length + ' ' + pl(mv.length, 'salida', 'salidas') + ' a 8 h después de la entrada. Ahora el arreglo automático puede mover sus breaks.', true); }
   }
+  else if (a === 'assign-op'){ const i = buildIssues(d).find(x => x.id === t.dataset.id); const c = i && i.cands[+t.dataset.ci]; if (c) applyOp(c.op); }
+  else if (a === 'auto-tasks'){ runAutoTasks([d]); }
+  else if (a === 'auto-tasks-week'){ runAutoTasks(S.days); }
   else if (a === 'fixend'){ applyEndFix(findRec(t.dataset.rid), +t.dataset.to); }
   else if (a === 'view'){
     const i = buildIssues(d).find(x => x.id === t.dataset.id); if (!i) return;
@@ -1006,15 +2682,23 @@ $('#minc').addEventListener('change', e => { CFG.minCover = +e.target.value; ren
 $('#newFile').addEventListener('click', () => $('#file').click());
 $('#file').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
 document.addEventListener('dragover', e => e.preventDefault());
-document.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadFile(f); });
+document.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if (!f) return; if (S.page === 'briefing'){ if (B.step === 4) bLoad(f); return; } loadFile(f); });
 
 /* descargas disponibles */
 (async () => {
   const localDl = () => ({ save: async ({ filename, data }) => { const u = URL.createObjectURL(new Blob([data], { type:'application/octet-stream' })); const a = document.createElement('a'); a.href = u; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); return { status:'saved' }; } });
   try{ S.dl = (window.claude && claude.use) ? await claude.use('downloads') : localDl(); }catch(_){ S.dl = window.claude ? null : localDl(); }
-  if (S.days.length) render();
+  if (S.days.length || S.page === 'briefing') render();
 })();
-renderLanding();
+function route(){
+  S.page = location.hash === '#briefing' ? 'briefing' : 'breaks';
+  document.body.classList.toggle('page-briefing', S.page === 'briefing');
+  document.querySelectorAll('#nav [data-nav]').forEach(b => b.setAttribute('aria-current', b.dataset.nav === S.page ? 'page' : 'false'));
+  render();
+}
+$('#nav').addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (b) location.hash = b.dataset.nav; });
+window.addEventListener('hashchange', route);
+route();
 })();
 </script>
 </body>
