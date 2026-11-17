@@ -2014,48 +2014,182 @@ async function bPdf(){
   try{
     const lib = window.jspdf && window.jspdf.jsPDF;
     if (!lib) throw new Error('No cargó la librería del PDF. Revisa tu conexión y recarga la página.');
-    const P = B.plan, placed = P.sessions.reduce((n, s) => n + s.members.length, 0);
+    const P = B.plan, placed = P.sessions.reduce((n, s) => n + s.members.length, 0), miss = P.unplaced.length;
     const doc = new lib({ unit: 'mm', format: 'a4' });
-    const W = 210, M = 16, TW = W - 2 * M, INK = [16, 27, 51], MUT = [86, 98, 128];
-    let y = 20;
-    const ensure = h => { if (y + h > 282){ doc.addPage(); y = 20; } };
-    const txt = (s, size, bold, color, ind) => {
-      doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor.apply(doc, color || INK);
-      const lh = size * 0.40 + 1.4;
-      doc.splitTextToSize(pdfT(s), TW - (ind || 0)).forEach(l => { ensure(lh); doc.text(l, M + (ind || 0), y); y += lh; });
+    const W = 210, H = 297, M = 14, CW = W - 2 * M;
+    const INK = [16, 27, 51], MUT = [86, 98, 128], LINE = [212, 218, 230], SOFT = [244, 246, 250], WHITE = [255, 255, 255];
+    const GREEN = [27, 127, 79], AMBER = [184, 116, 8], RED = [211, 38, 58], BLUE = [47, 91, 234];
+    const DAY = [[47, 91, 234], [10, 127, 100], [168, 43, 124], [163, 100, 5], [63, 91, 169], [95, 106, 138], [211, 38, 58]];
+    const QC = { Phones: [47, 91, 234], Chats: [10, 127, 100], Tickets: [163, 100, 5], Casino: [168, 43, 124] };
+    const qc = q => QC[q] || [95, 106, 138];
+    const mix = (c, k) => c.map(v => Math.round(v + (255 - v) * k));
+    const T = s => pdfT(s);
+    const font = (size, bold, color) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(color[0], color[1], color[2]); };
+    const fillC = c => doc.setFillColor(c[0], c[1], c[2]);
+    const drawC = c => doc.setDrawColor(c[0], c[1], c[2]);
+    const tw = (s, size, bold) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); return doc.getTextWidth(T(s)); };
+    const fit = (s, maxW, size, bold) => { s = T(s); if (tw(s, size, bold) <= maxW) return s; while (s.length > 1 && tw(s + '...', size, bold) > maxW) s = s.slice(0, -1); return s + '...'; };
+    const wrap = (s, maxW, size, bold) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); return doc.splitTextToSize(T(s), maxW); };
+    const pill = (text, xRight, yTop, color, size) => {
+      size = size || 7.5; const w = tw(text, size, true) + 5, h = 4.6;
+      fillC(mix(color, 0.86)); doc.roundedRect(xRight - w, yTop, w, h, 2.3, 2.3, 'F');
+      font(size, true, color); doc.text(T(text), xRight - w / 2, yTop + 3.2, { align: 'center' });
+      return w;
     };
-    const rule = () => { ensure(4); doc.setDrawColor(212, 218, 230); doc.line(M, y, W - M, y); y += 5; };
-    doc.setFillColor(47, 91, 234); doc.rect(0, 0, W, 6, 'F');
-    txt(B.title, 20, true);
-    y += 1;
-    txt(B.areas.join(', ') + ', ' + B.dur + ' min, ' + bWhenText() + ', mínimo ' + B.min + ' por sesión', 10.5, false, MUT);
-    txt('Estado: ' + (B.approved ? 'APROBADO' : 'Pendiente de aprobación'), 10.5, true, B.approved ? [27, 127, 79] : [184, 116, 8]);
-    txt('Generado: ' + new Date().toLocaleDateString('es'), 9.5, false, MUT);
-    y += 2; rule();
-    txt('Entran ' + placed + ' de ' + P.total + ' personas en ' + P.sessions.length + ' sesiones de ' + B.dur + ' min.' + (P.unplaced.length ? ' Faltan ' + P.unplaced.length + ' sin horario.' : ''), 11.5, true);
-    y += 2;
+    const smallHeader = () => {
+      fillC(BLUE); doc.rect(0, 0, W, 3, 'F');
+      font(8.5, true, MUT); doc.text(fit(B.title, 120, 8.5, true), M, 10);
+      font(8.5, false, MUT); doc.text(B.approved ? 'APROBADO' : 'Pendiente de aprobación', W - M, 10, { align: 'right' });
+      drawC(LINE); doc.setLineWidth(0.3); doc.line(M, 13, W - M, 13);
+    };
+    let y = 0;
+    const newPage = () => { doc.addPage(); smallHeader(); y = 22; };
+    const need = h => { if (y + h > H - 18) newPage(); };
+
+    /* ---- Portada: franja con el título ---- */
+    fillC(INK); doc.rect(0, 0, W, 46, 'F');
+    fillC(BLUE); doc.rect(0, 0, W, 3, 'F');
+    // fichas decorativas (como las de los breaks)
+    [[156, 11, BLUE, -8], [170, 22, [10, 127, 100], 5], [150, 31, [168, 43, 124], -3]].forEach(a => { fillC(a[2]); doc.roundedRect(a[0], a[1], 26, 8, 2.6, 2.6, 'F'); });
+    font(22, true, WHITE); const tl = wrap(B.title, 125, 22, true).slice(0, 2);
+    tl.forEach((l, i) => doc.text(l, M, 22 + i * 9));
+    font(10.5, false, [201, 211, 234]);
+    wrap('Briefing para ' + B.areas.join(', ') + ', ' + B.dur + ' min por sesión', 122, 10.5, false).slice(0, 2).forEach((l, i) => doc.text(l, M, 22 + tl.length * 9 + 3 + i * 5));
+    y = 56;
+    // estado
+    const stTxt = B.approved ? 'APROBADO' : 'PENDIENTE DE APROBACIÓN', stCol = B.approved ? GREEN : AMBER, stW = tw(stTxt, 9, true) + 10;
+    fillC(mix(stCol, 0.86)); doc.roundedRect(M, y - 4, stW, 8, 4, 4, 'F');
+    font(9, true, stCol); doc.text(T(stTxt), M + stW / 2, y + 1.2, { align: 'center' });
+    font(9, false, MUT); doc.text('Generado el ' + new Date().toLocaleDateString('es'), W - M, y + 1.2, { align: 'right' });
+    y += 10;
+
+    /* ---- Resumen ---- */
+    const when = bWhenText();
+    const rows = [['Cuándo', when.charAt(0).toUpperCase() + when.slice(1) + '. Nunca en la primera ni en la última hora del turno de cada persona.'], ['Mínimo por sesión', B.min + ' ' + pl(B.min, 'persona', 'personas')], ['Áreas', B.areas.join(', ')]];
+    const lines = rows.map(r => wrap(r[1], CW - 52, 9.5, false));
+    const boxH = 10 + lines.reduce((n, l) => n + l.length * 4.4 + 3, 0) + 22;
+    fillC(SOFT); doc.roundedRect(M, y, CW, boxH, 3, 3, 'F');
+    let yy = y + 8;
+    rows.forEach((r, i) => { font(9, true, MUT); doc.text(T(r[0]), M + 6, yy); font(9.5, false, INK); lines[i].forEach((l, k) => doc.text(l, M + 46, yy + k * 4.4)); yy += lines[i].length * 4.4 + 3; });
+    // resultado + barra
+    font(12, true, INK);
+    doc.text(T('Entran ' + placed + ' de ' + P.total + ' personas en ' + P.sessions.length + ' sesiones' + (miss ? '. Faltan ' + miss + '.' : '. Todos tienen horario.')), M + 6, yy + 4);
+    const pct = P.total ? placed / P.total : 0, bw = CW - 12;
+    fillC(mix(RED, 0.8)); doc.roundedRect(M + 6, yy + 8, bw, 3.4, 1.7, 1.7, 'F');
+    if (pct > 0){ fillC([10, 127, 100]); doc.roundedRect(M + 6, yy + 8, Math.max(3.4, bw * pct), 3.4, 1.7, 1.7, 'F'); }
+    y += boxH + 8;
+
+    /* ---- Calendario ---- */
+    need(22);
+    font(15, true, INK); doc.text('Calendario de sesiones', M, y + 2);
+    fillC(BLUE); doc.rect(M, y + 5, 28, 1, 'F'); y += 12;
     const byDay = {};
     P.sessions.forEach(s => { (byDay[s.di] = byDay[s.di] || []).push(s); });
-    Object.keys(byDay).map(Number).sort((a, b) => a - b).forEach(di => {
-      ensure(14); y += 2; txt(bDayName(B.days[di]), 13, true, [47, 91, 234]);
-      byDay[di].forEach(s => {
-        ensure(10 + s.members.length * 5.5);
-        txt(fmt(s.start) + ' a ' + fmt(s.end) + ((s.cap || 1) > 1 ? '  (regla relajada: hasta ' + s.cap + ' de la misma cola fuera a la vez)' : ''), 11, true);
+    const dayKeys = Object.keys(byDay).map(Number).sort((a, b) => a - b);
+    if (!dayKeys.length){ font(10, false, MUT); doc.text('No se pudo armar ninguna sesión con estos datos. Mira las recomendaciones.', M, y); y += 8; }
+    const cardHeight = s => {
+      let h = 6; s.members.forEach(m => { h += 10.8 + (m.warn ? 4.2 : 0); });
+      const notes = sessNotes(s); h += notes.reduce((n, t) => n + wrap(t.text, CW - 62, 8, false).length * 3.6 + 1.5, 0);
+      return Math.max(28, h + 3);
+    };
+    const sessNotes = s => {
+      const out = [];
+      if ((s.cap || 1) > 1) out.push({ text: 'Regla relajada: en esta sesión salen a la vez hasta ' + s.cap + ' personas de la misma cola o de Processing. Revisa que haya cobertura.', col: AMBER });
+      if (s.members.length < B.min) out.push({ text: 'Menos del mínimo de ' + B.min + ' personas.', col: RED });
+      s.members.forEach(m => { if (m.soft && m.soft.length) out.push({ text: m.soft[0] + '.', col: AMBER }); });
+      return out;
+    };
+    dayKeys.forEach(di => {
+      const dc = DAY[di % DAY.length], list = byDay[di];
+      need(14 + cardHeight(list[0]));
+      fillC(dc); doc.roundedRect(M, y - 1, 3, 9, 1.5, 1.5, 'F');
+      font(14, true, INK); doc.text(T(bDayName(B.days[di])), M + 7, y + 6);
+      font(9, false, MUT); doc.text(list.length + ' ' + pl(list.length, 'sesión', 'sesiones'), W - M, y + 6, { align: 'right' });
+      drawC(LINE); doc.setLineWidth(0.3); doc.line(M, y + 10, W - M, y + 10); y += 14;
+      list.forEach(s => {
+        const h = cardHeight(s); need(h + 4);
+        // tarjeta
+        fillC(WHITE); drawC(LINE); doc.setLineWidth(0.3); doc.roundedRect(M, y, CW, h, 3, 3, 'FD');
+        // bloque de hora
+        fillC(dc); doc.roundedRect(M, y, 40, h, 3, 3, 'F'); doc.rect(M + 20, y, 20, h, 'F');
+        font(15, true, WHITE); doc.text(T(fmt(s.start)), M + 20, y + h / 2 - 1.5, { align: 'center' });
+        font(9, false, WHITE); doc.text(T('a ' + fmt(s.end)), M + 20, y + h / 2 + 3.5, { align: 'center' });
+        const dw = tw((s.end - s.start) + ' min', 7.5, true) + 5;
+        fillC(mix(dc, 0.3)); doc.roundedRect(M + 20 - dw / 2, y + h / 2 + 6.5, dw, 4.4, 2.2, 2.2, 'F');
+        font(7.5, true, WHITE); doc.text(T((s.end - s.start) + ' min'), M + 20, y + h / 2 + 9.6, { align: 'center' });
+        drawC(mix(dc, 0.6)); doc.setLineDashPattern([1, 1], 0); doc.line(M + 40, y + 4, M + 40, y + h - 4); doc.setLineDashPattern([], 0);
+        // asistentes
+        let ry = y + 5; const x0 = M + 46, xr = M + CW - 5;
         s.members.forEach(m => {
-          const r = m.rec, br = [r.b1, r.b2].filter(x => x != null).map(fmt).join(' y ');
-          txt('- ' + r.name + ' (' + r.area + ', ' + (r.queue || 'sin cola') + ') Task: ' + (mainText(r) || 'sin task') + (br ? '. Breaks: ' + br : '') + (m.warn ? '. AVISO: ' + m.warn : ''), 9.5, false, INK, 4);
+          const r = m.rec, col = qc(r.queue), br = [r.b1, r.b2].filter(v => v != null).map(fmt).join(' y ');
+          fillC(mix(col, 0.8)); drawC(col); doc.setLineWidth(0.5); doc.circle(x0 + 3.6, ry + 3.6, 3.6, 'FD');
+          font(7, true, col); doc.text(T(bIni(r.name)), x0 + 3.6, ry + 4.6, { align: 'center' });
+          const pw = tw(r.queue || 'sin cola', 7.5, true) + 5;
+          font(10, true, INK); doc.text(fit(r.name, xr - x0 - 12 - pw, 10, true), x0 + 10, ry + 3);
+          pill(r.queue || 'sin cola', xr, ry - 0.2, col);
+          font(7.8, false, MUT); doc.text(fit(r.area + ', ' + (mainText(r) || 'sin task') + (br ? '  |  breaks ' + br : ''), xr - x0 - 10, 7.8, false), x0 + 10, ry + 7.5);
+          ry += 10.8;
+          if (m.warn){ font(7.8, true, RED); doc.text(fit('Aviso: ' + m.warn, xr - x0 - 10, 7.8, true), x0 + 10, ry - 1.2); ry += 4.2; }
         });
-        y += 1.5;
+        ry += 0.8;
+        sessNotes(s).forEach(n => { wrap(n.text, CW - 62, 8, false).forEach(l => { font(8, false, n.col); doc.text(l, x0, ry + 2); ry += 3.6; }); ry += 1.5; });
+        y += h + 4;
       });
+      y += 4;
     });
-    y += 3; ensure(14); txt('Recomendaciones', 13, true);
-    B.recs.forEach(r => txt('- ' + r.text, 9.5, false, INK, 4));
-    y += 3; ensure(14); txt('Personas que faltan por agendar (' + P.unplaced.length + ')', 13, true, P.unplaced.length ? [211, 38, 58] : [27, 127, 79]);
-    if (P.unplaced.length) P.unplaced.forEach(u => txt('- ' + u.name + (u.rec ? ' (' + u.rec.area + ', ' + (u.rec.queue || 'sin cola') + ')' : '') + ': ' + bWhyText(u) + (u.alt ? '. Podría el ' + B.days[u.alt.di].label + ' a las ' + fmt(u.alt.t) + '.' : ''), 9.5, false, INK, 4));
-    else txt('Nadie falta: todas las personas elegidas tienen horario.', 9.5, false, INK, 4);
-    y += 8; ensure(24);
-    doc.setDrawColor.apply(doc, INK); doc.line(M, y + 8, M + 80, y + 8); doc.line(M + 100, y + 8, W - M, y + 8);
-    txt('Aprobado por', 9, false, MUT); doc.setFontSize(9); doc.text('Fecha', M + 100, y);
+
+    /* ---- Personas que faltan ---- */
+    need(30);
+    const mc = miss ? RED : GREEN;
+    font(15, true, INK); doc.text(T('Personas que faltan por agendar (' + miss + ')'), M, y + 2);
+    fillC(mc); doc.rect(M, y + 5, 28, 1, 'F'); y += 12;
+    if (!miss){
+      fillC(mix(GREEN, 0.88)); doc.roundedRect(M, y, CW, 12, 3, 3, 'F');
+      font(10.5, true, GREEN); doc.text('Nadie falta: todas las personas elegidas tienen horario.', M + 6, y + 7.4); y += 18;
+    } else {
+      P.unplaced.forEach(u => {
+        const why = bWhyText(u) + (u.alt ? '. Podría el ' + B.days[u.alt.di].label + ' a las ' + fmt(u.alt.t) : '') + '.';
+        const wl = wrap(why, CW - 14, 8.8, false), h = 12 + wl.length * 4;
+        need(h + 3);
+        fillC(mix(RED, 0.92)); drawC(mix(RED, 0.7)); doc.setLineWidth(0.3); doc.roundedRect(M, y, CW, h, 3, 3, 'FD');
+        fillC(RED); doc.roundedRect(M, y, 2.6, h, 1.3, 1.3, 'F');
+        font(10.5, true, INK); doc.text(T(u.name), M + 7, y + 6.2);
+        if (u.rec){ pill(u.rec.queue || 'sin cola', W - M - 4, y + 3.2, qc(u.rec.queue)); font(8, false, MUT); doc.text(T(u.rec.area), W - M - 4 - (tw(u.rec.queue || 'sin cola', 7.5, true) + 5) - 3, y + 6.4, { align: 'right' }); }
+        font(8.8, false, MUT); wl.forEach((l, i) => doc.text(l, M + 7, y + 11.2 + i * 4));
+        y += h + 3;
+      });
+      y += 3;
+      font(8.5, false, MUT); const tip = wrap('Para el siguiente training puedes dejar marcadas solo a estas personas: usa el botón "Agendar otro training solo con ellos" o sube el Excel de este briefing (hoja Faltan).', CW, 8.5, false);
+      tip.forEach((l, i) => doc.text(l, M, y + i * 4)); y += tip.length * 4 + 6;
+    }
+
+    /* ---- Recomendaciones ---- */
+    need(26);
+    font(15, true, INK); doc.text('Recomendaciones', M, y + 2);
+    fillC(BLUE); doc.rect(M, y + 5, 28, 1, 'F'); y += 12;
+    B.recs.forEach(r => {
+      const col = r.kind === 'warn' ? AMBER : r.kind === 'ok' ? GREEN : BLUE, wl = wrap(r.text, CW - 12, 9.3, false), h = wl.length * 4.2 + 5;
+      need(h + 2);
+      fillC(mix(col, 0.9)); doc.roundedRect(M, y, CW, h, 2.5, 2.5, 'F');
+      fillC(col); doc.circle(M + 5, y + 5.2, 1.4, 'F');
+      font(9.3, false, INK); wl.forEach((l, i) => doc.text(l, M + 10, y + 5.8 + i * 4.2));
+      y += h + 2.5;
+    });
+
+    /* ---- Aprobación ---- */
+    y += 6; need(34);
+    fillC(SOFT); drawC(LINE); doc.setLineWidth(0.3); doc.roundedRect(M, y, CW, 30, 3, 3, 'FD');
+    font(10, true, INK); doc.text('Aprobación', M + 6, y + 8);
+    drawC(MUT); doc.setLineWidth(0.4); doc.line(M + 6, y + 23, M + 96, y + 23); doc.line(M + 112, y + 23, W - M - 6, y + 23);
+    font(8.5, false, MUT); doc.text('Aprobado por', M + 6, y + 27.5); doc.text('Fecha', M + 112, y + 27.5);
+    if (B.approved){ font(11, true, GREEN); doc.text('APROBADO', W - M - 6, y + 8, { align: 'right' }); }
+
+    /* ---- Pie de página en todas las hojas ---- */
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++){
+      doc.setPage(i); drawC(LINE); doc.setLineWidth(0.3); doc.line(M, H - 13, W - M, H - 13);
+      font(8, false, MUT); doc.text(fit(B.title, 130, 8, false), M, H - 8); doc.text('Página ' + i + ' de ' + n, W - M, H - 8, { align: 'right' });
+    }
     const out = doc.output('arraybuffer');
     await S.dl.save({ filename: bFileBase() + '.pdf', data: new Uint8Array(out) });
     toast('PDF del briefing listo.');
